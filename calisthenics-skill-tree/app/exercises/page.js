@@ -36,14 +36,16 @@ export default function ExercisesPage() {
           
           {/* LOOP THROUGH EACH EXERCISE */}
           {exercises.map((exercise) => (
-            <div
-              key={exercise.id}
-              className="rounded-lg p-6 transition-all duration-200"
-              style={{
-                backgroundColor: theme.background.secondary,
-                border: `1px solid ${theme.border.default}`,
-              }}
-            >
+          <a
+            key={exercise.id}
+            href={`/exercises/${exercise.id}`}
+            className="block rounded-lg p-6 transition-all duration-200 hover:scale-105"
+            style={{
+              backgroundColor: theme.background.secondary,
+              border: `1px solid ${theme.border.default}`,
+              cursor: 'pointer'
+            }}
+          >
               {/* EXERCISE ICON */}
               <div className="flex justify-center mb-4">
                 <div 
@@ -101,7 +103,7 @@ export default function ExercisesPage() {
               >
                 {exercise.summary}
               </p>
-            </div>
+            </a>
           ))}
 
         </div>
