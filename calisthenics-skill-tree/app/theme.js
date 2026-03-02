@@ -6,7 +6,7 @@ export const theme = {
   background: {
     primary: '#000000',      // Main background
     secondary: '#040404',    // Cards/sections background
-    tertiary: '#0e0e12',     // Elevated elements
+    tertiary: '#0c0c0e',     // Elevated elements
   },
 
   // Border Colors
@@ -28,7 +28,9 @@ export const theme = {
   accent: {
     primary: '#09c0b7',      // Sexy Green
   },
-
+  button: {
+    background: '#0a0c0c',
+  },
   // Node Colors (Skill Tree)
   node: {
     border: 'rgba(255, 255, 255, 0.3)',
