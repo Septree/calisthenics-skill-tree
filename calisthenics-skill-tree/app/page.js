@@ -1,17 +1,54 @@
 'use client'
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect} from 'react';
 import { theme } from './theme'; 
-import { exercises } from './exercises-data';  
+import { exercises } from './exercises-data';
+import { useAuth } from './AuthContext';   
+import { getUserProgress, markExerciseComplete, markExerciseIncomplete } from './db-helpers';
 export default function Home() {
   const [hoveredExercise, setHoveredExercise] = useState(null);  
-
-  // Calculate container height
+  const { user } = useAuth();
+  const [completedExercises, setCompletedExercises] = useState([]);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+  // calculate container height
   const containerHeight = Math.max(
     800,
     ...exercises.map(ex => ex.position.top + 180)
   );
 
+  // Load user progress
+  useEffect(() => {
+    if (user) {
+      getUserProgress(user.uid).then((progress) => {
+        setCompletedExercises(progress);
+        setIsLoadingProgress(false);
+      });
+    } else {
+      setIsLoadingProgress(false);
+    }
+  }, [user]);
+
+  // Handle node click (OUTSIDE useEffect)
+  const handleNodeClick = async (exerciseId) => {
+    if (!user) {
+      alert('Please sign in to track progress');
+      return;
+    }
+
+    const isCompleted = completedExercises.includes(exerciseId);
+
+    if (isCompleted) {
+      const success = await markExerciseIncomplete(user.uid, exerciseId);
+      if (success) {
+        setCompletedExercises(completedExercises.filter(id => id !== exerciseId));
+      }
+    } else {
+      const success = await markExerciseComplete(user.uid, exerciseId);
+      if (success) {
+        setCompletedExercises([...completedExercises, exerciseId]);
+      }
+    }
+  };
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: theme.background.primary }}>
       {/* INTRO TEXT */}
@@ -74,13 +111,15 @@ export default function Home() {
               left: `${exercise.position.left}px`,
             }}
           >
-            <button
-              className="rounded-full transition-all duration-200 hover:scale-110 cursor-pointer bg-transparent relative"
-              style={{
-                width: '80px',
-                height: '80px',
-                border: `2px solid ${theme.node.border}`,
-              }}
+          <button
+            onClick={() => handleNodeClick(exercise.id)} 
+            className="rounded-full transition-all duration-200 hover:scale-110 cursor-pointer bg-transparent relative"
+            style={{
+              width: '80px',
+              height: '80px',
+              border: `2px solid ${theme.node.border}`,
+              opacity: completedExercises.includes(exercise.id) ? 1 : 0.5,  // opactiy, edit this as you wish
+            }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.border = `2px solid ${theme.node.borderHover}`;
                 setHoveredExercise(exercise);
@@ -90,14 +129,27 @@ export default function Home() {
                 setHoveredExercise(null);
               }}
             >
-              <div className="w-full h-full flex items-center justify-center p-2">
-                <img 
-                  src={exercise.icon}
-                  alt={exercise.name}
-                  className="w-full h-full object-contain"
-                  style={{ filter: 'brightness(1.2)' }}
-                />
+          <div className="w-full h-full flex items-center justify-center p-2 relative">
+            <img 
+              src={exercise.icon}
+              alt={exercise.name}
+              className="w-full h-full object-contain"
+              style={{ filter: 'brightness(1.2)' }}
+            />
+            
+            {/* Checkmark for completed exercises */}
+            {completedExercises.includes(exercise.id) && (
+              <div 
+                className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                style={{
+                  backgroundColor: theme.accent.success,
+                  color: 'white'
+                }}
+              >
+                ✓
               </div>
+            )}
+          </div>
             </button>
 
             {/* HOVER BOX */}

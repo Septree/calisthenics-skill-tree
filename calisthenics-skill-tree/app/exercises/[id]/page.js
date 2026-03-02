@@ -3,6 +3,8 @@
 import { theme } from '../../theme';
 import { getExerciseById } from '../../exercises-data';
 import { use, useState, useEffect } from 'react';  
+import { useAuth } from '../../AuthContext'; 
+import { getUserProgress, markExerciseComplete, markExerciseIncomplete, isExerciseCompleted } from '../../db-helpers';
 
 // this will fetch a YouTube video for the exercise we want
 async function fetchYouTubeVideo(exerciseName) {
@@ -33,6 +35,14 @@ export default function ExerciseDetailPage({ params }) {
   // this state to store the YouTube video ID
   const [videoId, setVideoId] = useState(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(true);
+  //progress state, check if this exercise is completed
+  const { user } = useAuth();
+  const [completedExercises, setCompletedExercises] = useState([]);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+
+  // check if this exercise is completed
+  const isCompleted = isExerciseCompleted(completedExercises, exerciseId);
 
   // now we will fetch YouTube video when it loads
   useEffect(() => {
@@ -43,6 +53,43 @@ export default function ExerciseDetailPage({ params }) {
       });
     }
   }, [exercise]);
+  useEffect(() => { // load user progress
+  if (user) {
+    getUserProgress(user.uid).then((progress) => {
+      setCompletedExercises(progress);
+      setIsLoadingProgress(false);
+    });
+  } else {
+    setIsLoadingProgress(false);
+  }
+}, [user]);
+// this function to mark exercise as complete
+const handleMarkComplete = async () => {
+  if (!user) {
+    alert('Please sign in to track progress');
+    return;
+  }
+
+  setIsMarkingComplete(true);
+
+  // toggle: if completed, mark incomplete. if incomplete, mark complete.
+  if (isCompleted) {
+    const success = await markExerciseIncomplete(user.uid, exerciseId);
+    if (success) {
+      // remove from local state
+      setCompletedExercises(completedExercises.filter(id => id !== exerciseId));
+    }
+  } else {
+    const success = await markExerciseComplete(user.uid, exerciseId);
+    if (success) {
+      // add to local state
+      setCompletedExercises([...completedExercises, exerciseId]);
+    }
+  }
+
+  setIsMarkingComplete(false);
+};
+
   // if exercise not found, show error
   if (!exercise) {
     return (
@@ -297,19 +344,36 @@ export default function ExerciseDetailPage({ params }) {
           </div>
         </div>
 
-        {/* BACK BUTTON */}
-        <div>
-          <a 
-            href="/exercises"
-            className="block w-full text-center py-4 rounded-lg font-semibold transition hover:opacity-90"
-            style={{ 
-              backgroundColor: theme.background.tertiary,
-              color: theme.accent.primary,
-            }}
-          >
-             Back to All Exercises
-          </a>
-        </div>
+          {/* ACTION BUTTONS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* mark as complete button */}
+            {user && (
+              <button
+                onClick={handleMarkComplete}
+                disabled={isMarkingComplete}
+                className="py-4 rounded-lg font-semibold transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  backgroundColor: isCompleted ? theme.accent.success : theme.accent.primary,
+                  color: 'white'
+                }}
+              >
+                {isMarkingComplete ? 'Saving...' : isCompleted ? '✓ Completed (Click to Undo)' : 'Mark as Complete'}
+              </button>
+            )}
+            
+            {/* Back Button */}
+            <a 
+              href="/exercises"
+              className="block text-center py-4 rounded-lg font-semibold transition hover:opacity-90"
+              style={{ 
+                backgroundColor: theme.background.tertiary,
+                color: theme.text.primary,
+                border: `1px solid ${theme.border.default}`
+              }}
+            >
+               Back to All Exercises
+            </a>
+          </div>
 
       </div>
     </div>
