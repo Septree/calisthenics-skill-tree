@@ -58,13 +58,13 @@ export const exercises = [
     id: 6,
     name: "Muscle-up",
     icon: "/icons/muscle-up.png",
-    category: "advanced",
+    category: "compound",
     difficulty: "Advanced",
     summary: "Explosive pull-to-dip transition. Requires both pushing and pulling strength.",
     prerequisites: [1, 4, 7],
     position: { left: 275, top: 200 }
   },
-  {
+  /*{
     id: 7,
     name: "Diamond Push-ups",
     icon: "/icons/diamond-pushup.png",
@@ -73,7 +73,7 @@ export const exercises = [
     summary: "Narrow grip push-up variation for triceps.",
     prerequisites: [1],
     position: { left: -10, top: 300 }
-  }
+  }*/
 ];
 
 // Helper function to get exercise by ID

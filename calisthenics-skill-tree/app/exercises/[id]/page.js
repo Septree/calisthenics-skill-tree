@@ -2,16 +2,47 @@
 
 import { theme } from '../../theme';
 import { getExerciseById } from '../../exercises-data';
-import { use } from 'react';    
+import { use, useState, useEffect } from 'react';  
+
+// this will fetch a YouTube video for the exercise we want
+async function fetchYouTubeVideo(exerciseName) {
+  const API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+  const searchQuery = `${exerciseName} calisthenics tutorial form`;
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&type=video&maxResults=1&key=${API_KEY}`;
+  
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.items && data.items.length > 0) {
+      const videoId = data.items[0].id.videoId;
+      return videoId;
+    }
+    return null;
+  } catch (error) {
+    console.error("YouTube API Error:", error);
+    return null;
+  }
+}
 //this was a bit complicated, but since it was outside the scope of the project i did use some ai help to assist with the logic here
 export default function ExerciseDetailPage({ params }) {
-  // get exercise ID from URL
   const unwrappedParams = use(params);
   const exerciseId = parseInt(unwrappedParams.id);
-  
-  // find the exercise
   const exercise = getExerciseById(exerciseId);
 
+  // this state to store the YouTube video ID
+  const [videoId, setVideoId] = useState(null);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(true);
+
+  // now we will fetch YouTube video when it loads
+  useEffect(() => {
+    if (exercise) {
+      fetchYouTubeVideo(exercise.name).then((id) => {
+        setVideoId(id);
+        setIsLoadingVideo(false);
+      });
+    }
+  }, [exercise]);
   // if exercise not found, show error
   if (!exercise) {
     return (
@@ -143,26 +174,57 @@ export default function ExerciseDetailPage({ params }) {
                 Video Tutorial
               </h2>
               
-              {/* Temporary placeholder for now*/}
-              <div 
-                className="w-full rounded-lg flex items-center justify-center"
-                style={{ 
-                  backgroundColor: theme.background.tertiary,
-                  border: `2px dashed ${theme.border.default}`,
-                  aspectRatio: '16/9'  // this is youtube aspect ratio
-                }}
-              >
-                <div className="text-center px-4">
-                  <div 
-                    className="text-6xl mb-3"
-                    style={{ color: theme.text.tertiary, opacity: 0.3 }}
-                  >
-                  </div>
-                  <p style={{ color: theme.text.tertiary }}>
-                    Video coming soon
-                  </p>
-                </div>
+          {/* Video Section - Shows real YouTube video or loading state */}
+          {isLoadingVideo ? (
+            // LOADING STATE
+            <div 
+              className="w-full rounded-lg flex items-center justify-center"
+              style={{ 
+                backgroundColor: theme.background.tertiary,
+                border: `2px dashed ${theme.border.default}`,
+                aspectRatio: '16/9'
+              }}
+            >
+              <div className="text-center px-4">
+                <p style={{ color: theme.text.tertiary }}>
+                  Loading video...
+                </p>
               </div>
+            </div>
+          ) : videoId ? (
+            // VIDEO FOUND - Embed YouTube video
+            <div 
+              className="w-full rounded-lg overflow-hidden"
+              style={{ aspectRatio: '16/9' }}
+            >
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube.com/embed/${videoId}`}
+                title={`${exercise.name} Tutorial`}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ border: 'none' }}
+              />
+            </div>
+          ) : (
+            // NO VIDEO FOUND
+            <div 
+              className="w-full rounded-lg flex items-center justify-center"
+              style={{ 
+                backgroundColor: theme.background.tertiary,
+                border: `2px dashed ${theme.border.default}`,
+                aspectRatio: '16/9'
+              }}
+            >
+              <div className="text-center px-4">
+                <p style={{ color: theme.text.tertiary }}>
+                  No video found
+                </p>
+              </div>
+            </div>
+          )}
             </div>
           </div>
         </div>
