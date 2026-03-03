@@ -4,19 +4,21 @@ import { useState, useEffect} from 'react';
 import { theme } from './theme'; 
 import { exercises } from './exercises-data';
 import { useAuth } from './AuthContext';   
-import { getUserProgress, markExerciseComplete, markExerciseIncomplete } from './db-helpers';
+import { getUserProgress } from './db-helpers';
 export default function Home() {
   const [hoveredExercise, setHoveredExercise] = useState(null);  
   const { user } = useAuth();
   const [completedExercises, setCompletedExercises] = useState([]);
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+  const [quote, setQuote] = useState(null);
+  const [isLoadingQuote, setIsLoadingQuote] = useState(true);
   // calculate container height
   const containerHeight = Math.max(
     800,
     ...exercises.map(ex => ex.position.top + 180)
   );
 
-  // Load user progress
+  // load user progress
   useEffect(() => {
     if (user) {
       getUserProgress(user.uid).then((progress) => {
@@ -28,38 +30,78 @@ export default function Home() {
     }
   }, [user]);
 
-  // Handle node click (OUTSIDE useEffect)
-  const handleNodeClick = async (exerciseId) => {
-    if (!user) {
-      alert('Please sign in to track progress');
-      return;
-    }
-
-    const isCompleted = completedExercises.includes(exerciseId);
-
-    if (isCompleted) {
-      const success = await markExerciseIncomplete(user.uid, exerciseId);
-      if (success) {
-        setCompletedExercises(completedExercises.filter(id => id !== exerciseId));
+  useEffect(() => {
+  const fetchQuote = async () => {
+    try {
+      const response = await fetch('https://api.api-ninjas.com/v1/quotes', {
+        headers: { 
+          'X-Api-Key': process.env.NEXT_PUBLIC_QUOTES_API_KEY 
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        setQuote(data[0]);
       }
-    } else {
-      const success = await markExerciseComplete(user.uid, exerciseId);
-      if (success) {
-        setCompletedExercises([...completedExercises, exerciseId]);
-      }
+      
+      setIsLoadingQuote(false);
+    } catch (error) {
+      console.error('Error fetching quote:', error);
+      setIsLoadingQuote(false);
     }
   };
+
+  fetchQuote();
+}, []);
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: theme.background.primary }}>
-      {/* INTRO TEXT */}
-      <div className="text-center pt-12 pb-8">
-        <h1 className="text-4xl font-bold mb-2" style={{ color: theme.text.primary }}>
-          Calisthenics Skill Tree
-        </h1>
-        <p className="text-lg" style={{ color: theme.text.tertiary }}>
-          Master your body, one move at a time
-        </p>
-      </div>
+  {/* INTRO TEXT */}
+  <div className="text-center pt-12 pb-4">
+    <h1 className="text-4xl font-bold mb-2" style={{ color: theme.text.primary }}>
+      Calisthenics Skill Tree
+    </h1>
+    <p className="text-lg mb-6" style={{ color: theme.text.tertiary }}>
+      Master your body, one move at a time
+    </p>
+
+    {/* QUOTE OF THE DAY */}
+    <div 
+      className="max-w-2xl mx-auto p-6 rounded-lg mb-6"
+      style={{ 
+        backgroundColor: theme.background.secondary,
+        border: `1px solid ${theme.border.default}`
+      }}
+    >
+      {isLoadingQuote ? (
+        <p style={{ color: theme.text.tertiary }}>Loading quote...</p>
+      ) : quote ? (
+        <>
+          <p 
+            className="text-sm uppercase tracking-wide mb-3"
+            style={{ color: theme.text.tertiary }}
+          >
+            Quote of the Day
+          </p>
+          <p 
+            className="text-lg italic mb-3"
+            style={{ color: theme.text.primary }}
+          >
+            "{quote.quote}"
+          </p>
+          <p 
+            className="text-sm"
+            style={{ color: theme.text.secondary }}
+          >
+            — {quote.author}
+          </p>
+        </>
+      ) : (
+        <p style={{ color: theme.text.tertiary }}>No quote available</p>
+      )}
+    </div>
+  </div>
 
       {/* SKILL TREE CONTAINER */}
       <div className="relative max-w-6xl mx-auto pb-12" style={{ minHeight: `${containerHeight}px` }}>
@@ -111,15 +153,17 @@ export default function Home() {
               left: `${exercise.position.left}px`,
             }}
           >
-          <button
-            onClick={() => handleNodeClick(exercise.id)} 
-            className="rounded-full transition-all duration-200 hover:scale-110 cursor-pointer bg-transparent relative"
-            style={{
-              width: '80px',
-              height: '80px',
-              border: `2px solid ${theme.node.border}`,
-              opacity: completedExercises.includes(exercise.id) ? 1 : 0.5,  // opactiy, edit this as you wish
-            }}
+          <a
+            href={`/exercises/${exercise.id}`}
+              className="rounded-full transition-all duration-200 hover:scale-110 cursor-pointer bg-transparent relative flex items-center justify-center"
+              style={{
+                width: '80px',
+                height: '80px',
+                border: `2px solid ${theme.node.border}`,
+                opacity: completedExercises.includes(exercise.id) ? 1 : 0.5,
+                display: 'block',
+                textDecoration: 'none',
+              }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.border = `2px solid ${theme.node.borderHover}`;
                 setHoveredExercise(exercise);
@@ -129,28 +173,28 @@ export default function Home() {
                 setHoveredExercise(null);
               }}
             >
-          <div className="w-full h-full flex items-center justify-center p-2 relative">
-            <img 
-              src={exercise.icon}
-              alt={exercise.name}
-              className="w-full h-full object-contain"
-              style={{ filter: 'brightness(1.2)' }}
-            />
-            
-            {/* Checkmark for completed exercises */}
-            {completedExercises.includes(exercise.id) && (
-              <div 
-                className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                style={{
-                  backgroundColor: theme.accent.success,
-                  color: 'white'
-                }}
-              >
-                ✓
+              <div className="w-full h-full flex items-center justify-center p-2 relative">
+                <img 
+                  src={exercise.icon}
+                  alt={exercise.name}
+                  className="w-full h-full object-contain"
+                  style={{ filter: 'brightness(1.2)' }}
+                />
+                
+                {/* Checkmark for completed exercises */}
+                {completedExercises.includes(exercise.id) && (
+                  <div 
+                    className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{
+                      backgroundColor: theme.accent.success,
+                      color: 'white'
+                    }}
+                  >
+                    ✓
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-            </button>
+            </a>
 
             {/* HOVER BOX */}
             {hoveredExercise?.id === exercise.id && (
