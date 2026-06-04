@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// Least-privilege rules for the Calisthenics Skill Tree.
+// A signed-in user may read and write ONLY their own progress document.
+// Everything else is denied by default.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Only the admin account may add/edit/delete skills; anyone may read them.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'septrealdakheel@gmail.com';
+    }
+
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /exercises/{exerciseId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Explicit deny-all for any other path (default, stated for clarity).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

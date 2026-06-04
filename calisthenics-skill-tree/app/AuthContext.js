@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 
@@ -10,6 +11,7 @@ const AuthContext = createContext({});
 // hook to use auth context
 export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }) {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +29,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       await signOut(auth);
-      window.location.href = '/login';
+      router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
     }

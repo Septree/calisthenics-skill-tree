@@ -26,7 +26,8 @@ export const theme = {
 
   // Accent Colors
   accent: {
-    primary: '#09c0b7',      // Sexy Green
+    primary: '#09c0b7',      // Teal (brand)
+    success: '#22c55e',      // Green — completion / success states
   },
   button: {
     background: '#0a0c0c',

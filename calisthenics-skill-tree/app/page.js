@@ -1,21 +1,25 @@
 'use client'
 
 import { useState, useEffect} from 'react';
-import { theme } from './theme'; 
-import { exercises } from './exercises-data';
-import { useAuth } from './AuthContext';   
+import Link from 'next/link';
+import { theme } from './theme';
+import { useExercises } from './useExercises';
+import ExerciseIcon from './ExerciseIcon';
+import { useAuth } from './AuthContext';
 import { getUserProgress } from './db-helpers';
+import { getQuoteOfTheDay } from './quotes-data';
 export default function Home() {
-  const [hoveredExercise, setHoveredExercise] = useState(null);  
+  const [hoveredExercise, setHoveredExercise] = useState(null);
+  const { exercises } = useExercises();
   const { user } = useAuth();
   const [completedExercises, setCompletedExercises] = useState([]);
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
-  const [quote, setQuote] = useState(null);
-  const [isLoadingQuote, setIsLoadingQuote] = useState(true);
-  // calculate container height
+  // Self-hosted "quote of the day" — no external API, picked deterministically per day.
+  const quote = getQuoteOfTheDay();
+  // calculate container height from whichever exercises are loaded
   const containerHeight = Math.max(
     800,
-    ...exercises.map(ex => ex.position.top + 180)
+    ...exercises.map(ex => (ex.position?.top ?? 0) + 180)
   );
 
   // load user progress
@@ -29,31 +33,6 @@ export default function Home() {
       setIsLoadingProgress(false);
     }
   }, [user]);
-
-  useEffect(() => {
-  const fetchQuote = async () => {
-    try {
-      const response = await fetch('https://api.api-ninjas.com/v1/quotes', {
-        headers: { 
-          'X-Api-Key': process.env.NEXT_PUBLIC_QUOTES_API_KEY 
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        setQuote(data[0]);
-      }
-      
-      setIsLoadingQuote(false);
-    } catch (error) {
-      console.error('Error fetching quote:', error);
-      setIsLoadingQuote(false);
-    }
-  };
-
-  fetchQuote();
-}, []);
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: theme.background.primary }}>
@@ -74,23 +53,21 @@ export default function Home() {
         border: `1px solid ${theme.border.default}`
       }}
     >
-      {isLoadingQuote ? (
-        <p style={{ color: theme.text.tertiary }}>Loading quote...</p>
-      ) : quote ? (
+      {quote ? (
         <>
-          <p 
+          <p
             className="text-sm uppercase tracking-wide mb-3"
             style={{ color: theme.text.tertiary }}
           >
             Quote of the Day
           </p>
-          <p 
+          <p
             className="text-lg italic mb-3"
             style={{ color: theme.text.primary }}
           >
             "{quote.quote}"
           </p>
-          <p 
+          <p
             className="text-sm"
             style={{ color: theme.text.secondary }}
           >
@@ -103,9 +80,10 @@ export default function Home() {
     </div>
   </div>
 
-      {/* SKILL TREE CONTAINER */}
-      <div className="relative max-w-6xl mx-auto pb-12" style={{ minHeight: `${containerHeight}px` }}>
-        
+      {/* SKILL TREE CONTAINER (horizontally scrollable on small screens) */}
+      <div className="w-full overflow-x-auto pb-12">
+      <div className="relative mx-auto" style={{ width: '600px', minHeight: `${containerHeight}px` }}>
+
         {/* SVG LINES */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none">
           {exercises.map((exercise) => {
@@ -153,15 +131,15 @@ export default function Home() {
               left: `${exercise.position.left}px`,
             }}
           >
-          <a
-            href={`/exercises/${exercise.id}`}
-              className="rounded-full transition-all duration-200 hover:scale-110 cursor-pointer bg-transparent relative flex items-center justify-center"
+          <Link
+              href={`/exercises/${exercise.id}`}
+              aria-label={`${exercise.name}, ${exercise.difficulty}${completedExercises.includes(exercise.id) ? ', completed' : ''}`}
+              className="rounded-full transition-transform duration-200 hover:scale-110 cursor-pointer bg-transparent relative flex items-center justify-center"
               style={{
                 width: '80px',
                 height: '80px',
                 border: `2px solid ${theme.node.border}`,
                 opacity: completedExercises.includes(exercise.id) ? 1 : 0.5,
-                display: 'block',
                 textDecoration: 'none',
               }}
               onMouseEnter={(e) => {
@@ -172,29 +150,32 @@ export default function Home() {
                 e.currentTarget.style.border = `2px solid ${theme.node.border}`;
                 setHoveredExercise(null);
               }}
+              onFocus={() => setHoveredExercise(exercise)}
+              onBlur={() => setHoveredExercise(null)}
             >
               <div className="w-full h-full flex items-center justify-center p-2 relative">
-                <img 
+                <ExerciseIcon
                   src={exercise.icon}
-                  alt={exercise.name}
+                  name={exercise.name}
                   className="w-full h-full object-contain"
-                  style={{ filter: 'brightness(1.2)' }}
+                  style={{ fontSize: '1.25rem' }}
                 />
-                
+
                 {/* Checkmark for completed exercises */}
                 {completedExercises.includes(exercise.id) && (
-                  <div 
-                    className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                  <div
+                    className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold animate-pop"
                     style={{
                       backgroundColor: theme.accent.success,
-                      color: 'white'
+                      color: 'white',
+                      boxShadow: `0 0 0 2px ${theme.background.primary}`,
                     }}
                   >
                     ✓
                   </div>
                 )}
               </div>
-            </a>
+            </Link>
 
             {/* HOVER BOX */}
             {hoveredExercise?.id === exercise.id && (
@@ -244,6 +225,7 @@ export default function Home() {
             )}
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

@@ -1,11 +1,14 @@
 'use client'
 //similar code as signup, just for signing in instead
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
 import { theme } from '../theme';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,17 +23,21 @@ export default function LoginPage() {
       // sign in user
       await signInWithEmailAndPassword(auth, email, password);
       // redirect to home page on success
-      window.location.href = '/';
+      router.push('/');
     } catch (error) {
-      // show error message for each cade
-      if (error.code === 'auth/user-not-found') {
-        setError('No account found with this email');
-      } else if (error.code === 'auth/wrong-password') {
-        setError('Incorrect password');
-      } else if (error.code === 'auth/invalid-credential') {
+      // Generic message for all credential errors so we don't reveal whether an
+      // email is registered (prevents user enumeration). Keep rate-limit hint useful.
+      if (error.code === 'auth/too-many-requests') {
+        setError('Too many attempts. Please wait a moment and try again.');
+      } else if (
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/user-not-found' ||
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/invalid-email'
+      ) {
         setError('Invalid email or password');
       } else {
-        setError(error.message);
+        setError('Something went wrong. Please try again.');
       }
       setLoading(false);
     }
@@ -66,14 +73,17 @@ export default function LoginPage() {
         <form onSubmit={handleLogin}>
           {/* Email Input */}
           <div className="mb-4">
-            <label 
+            <label
+              htmlFor="email"
               className="block mb-2 text-sm font-medium"
               style={{ color: theme.text.secondary }}
             >
               Email
             </label>
             <input
+              id="email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -89,14 +99,17 @@ export default function LoginPage() {
 
           {/* Password Input */}
           <div className="mb-6">
-            <label 
+            <label
+              htmlFor="password"
               className="block mb-2 text-sm font-medium"
               style={{ color: theme.text.secondary }}
             >
               Password
             </label>
             <input
+              id="password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -144,15 +157,15 @@ export default function LoginPage() {
           style={{ color: theme.text.tertiary }}
         >
           Don't have an account?{' '}
-          <a 
+          <Link
             href="/signup"
             style={{ color: theme.accent.primary }}
             className="font-medium hover:underline"
           >
             Sign up
-          </a>
+          </Link>
         </p>
       </div>
     </div>
   );
-} //next step do PHASE 5
+} 

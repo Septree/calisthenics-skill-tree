@@ -1,28 +1,22 @@
 'use client'
 
+import Link from 'next/link';
 import { theme } from '../../theme';
-import { getExerciseById } from '../../exercises-data';
-import { use, useState, useEffect } from 'react';  
-import { useAuth } from '../../AuthContext'; 
+import { useExercises } from '../../useExercises';
+import ExerciseIcon from '../../ExerciseIcon';
+import { use, useState, useEffect } from 'react';
+import { useAuth } from '../../AuthContext';
 import { getUserProgress, markExerciseComplete, markExerciseIncomplete, isExerciseCompleted } from '../../db-helpers';
 
-// this will fetch a YouTube video for the exercise we want
+// Fetch a YouTube video for the exercise via our server route, so the API key
+// stays on the server and never reaches the browser bundle.
 async function fetchYouTubeVideo(exerciseName) {
-  const API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-  const searchQuery = `${exerciseName} calisthenics tutorial form`;
-  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&type=video&maxResults=1&key=${API_KEY}`;
-  
   try {
-    const response = await fetch(url);
+    const response = await fetch(`/api/youtube?name=${encodeURIComponent(exerciseName)}`);
     const data = await response.json();
-    
-    if (data.items && data.items.length > 0) {
-      const videoId = data.items[0].id.videoId;
-      return videoId;
-    }
-    return null;
+    return data.videoId ?? null;
   } catch (error) {
-    console.error("YouTube API Error:", error);
+    console.error("YouTube fetch error:", error);
     return null;
   }
 }
@@ -30,7 +24,8 @@ async function fetchYouTubeVideo(exerciseName) {
 export default function ExerciseDetailPage({ params }) {
   const unwrappedParams = use(params);
   const exerciseId = parseInt(unwrappedParams.id);
-  const exercise = getExerciseById(exerciseId);
+  const { exercises, loading: exercisesLoading } = useExercises();
+  const exercise = exercises.find((e) => e.id === exerciseId);
 
   // this state to store the YouTube video ID
   const [videoId, setVideoId] = useState(null);
@@ -40,6 +35,8 @@ export default function ExerciseDetailPage({ params }) {
   const [completedExercises, setCompletedExercises] = useState([]);
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  // drives the celebratory animation right after marking complete
+  const [justCompleted, setJustCompleted] = useState(false);
 
   // check if this exercise is completed
   const isCompleted = isExerciseCompleted(completedExercises, exerciseId);
@@ -84,16 +81,31 @@ const handleMarkComplete = async () => {
     if (success) {
       // add to local state
       setCompletedExercises([...completedExercises, exerciseId]);
+      // fire the celebration animation
+      setJustCompleted(true);
+      setTimeout(() => setJustCompleted(false), 1400);
     }
   }
 
   setIsMarkingComplete(false);
 };
 
+  // still loading the merged exercise list — wait before deciding "not found"
+  if (!exercise && exercisesLoading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: theme.background.primary }}
+      >
+        <p style={{ color: theme.text.tertiary }}>Loading exercise...</p>
+      </div>
+    );
+  }
+
   // if exercise not found, show error
   if (!exercise) {
     return (
-      <div 
+      <div
         className="min-h-screen flex items-center justify-center"
         style={{ backgroundColor: theme.background.primary }}
       >
@@ -101,26 +113,53 @@ const handleMarkComplete = async () => {
           <h1 className="text-2xl font-bold mb-4" style={{ color: theme.text.primary }}>
             Exercise Not Found
           </h1>
-          <a 
+          <Link
             href="/exercises"
             className="inline-block px-6 py-3 rounded-lg font-semibold transition hover:opacity-90"
-            style={{ 
+            style={{
               backgroundColor: theme.accent.primary,
               color: 'white'
             }}
           >
             Back to All Exercises
-          </a>
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen"
       style={{ backgroundColor: theme.background.primary }}
     >
+      {/* CELEBRATION OVERLAY — shows briefly after marking complete */}
+      {justCompleted && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none" aria-hidden="true">
+          <div className="relative">
+            {/* radiating burst rays */}
+            {[...Array(8)].map((_, i) => (
+              <span
+                key={i}
+                className="absolute left-1/2 top-1/2 w-2 h-16 rounded-full animate-burst-ray"
+                style={{
+                  backgroundColor: theme.accent.success,
+                  transform: `rotate(${i * 45}deg) translateY(-40px)`,
+                  transformOrigin: 'center top',
+                }}
+              />
+            ))}
+            {/* center badge */}
+            <div
+              className="relative w-28 h-28 rounded-full flex items-center justify-center text-5xl font-bold animate-celebrate"
+              style={{ backgroundColor: theme.accent.success, color: 'white' }}
+            >
+              ✓
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MAIN CONTENT */}
       <div className="max-w-6xl mx-auto px-6 py-12">
         
@@ -131,18 +170,18 @@ const handleMarkComplete = async () => {
           <div>
             {/* Icon and Header */}
             <div className="flex items-center gap-6 mb-6">
-              <div 
-                className="w-24 h-24 rounded-full flex items-center justify-center p-4 flex-shrink-0"
-                style={{ 
+              <div
+                className="w-24 h-24 rounded-full flex items-center justify-center p-4 flex-shrink-0 overflow-hidden"
+                style={{
                   backgroundColor: theme.background.tertiary,
                   border: `2px solid ${theme.border.light}`
                 }}
               >
-                <img 
+                <ExerciseIcon
                   src={exercise.icon}
-                  alt={exercise.name}
+                  name={exercise.name}
                   className="w-full h-full object-contain"
-                  style={{ filter: 'brightness(1.2)' }}
+                  style={{ fontSize: '1.75rem' }}
                 />
               </div>
 
@@ -247,9 +286,9 @@ const handleMarkComplete = async () => {
               <iframe
                 width="100%"
                 height="100%"
-                src={`https://www.youtube.com/embed/${videoId}`}
-                title={`${exercise.name} Tutorial`}
-                frameBorder="0"
+                src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+                title={`${exercise.name} video tutorial`}
+                referrerPolicy="strict-origin-when-cross-origin"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 style={{ border: 'none' }}
@@ -351,28 +390,29 @@ const handleMarkComplete = async () => {
               <button
                 onClick={handleMarkComplete}
                 disabled={isMarkingComplete}
-                className="py-4 rounded-lg font-semibold transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`py-4 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${justCompleted ? 'animate-celebrate' : ''}`}
                 style={{
                   backgroundColor: isCompleted ? theme.accent.success : theme.accent.primary,
-                  color: 'white'
+                  color: 'white',
+                  boxShadow: justCompleted ? `0 0 24px ${theme.accent.success}` : 'none',
                 }}
               >
-                {isMarkingComplete ? 'Saving...' : isCompleted ? '✓ Completed (Click to Undo)' : 'Mark as Complete'}
+                {isMarkingComplete ? 'Saving...' : isCompleted ? '✓ Completed — tap to undo' : 'Mark as Complete'}
               </button>
             )}
             
             {/* Back Button */}
-            <a 
+            <Link
               href="/exercises"
-              className="block text-center py-4 rounded-lg font-semibold transition hover:opacity-90"
-              style={{ 
+              className="flex items-center justify-center py-4 rounded-lg font-semibold transition hover:opacity-90"
+              style={{
                 backgroundColor: theme.background.tertiary,
                 color: theme.text.primary,
                 border: `1px solid ${theme.border.default}`
               }}
             >
-               Back to All Exercises
-            </a>
+              Back to All Exercises
+            </Link>
           </div>
 
       </div>

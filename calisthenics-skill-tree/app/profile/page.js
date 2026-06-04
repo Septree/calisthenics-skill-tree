@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { theme } from '../theme';
-import { exercises, getCategories } from '../exercises-data';
+import { useExercises, getCategoriesFrom } from '../useExercises';
 import { useAuth } from '../AuthContext';
 import { getUserProgress } from '../db-helpers';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { exercises } = useExercises();
   const [completedExercises, setCompletedExercises] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,7 +34,7 @@ export default function ProfilePage() {
   };
 
   // calculate category progress with REAL data
-  const categories = getCategories();
+  const categories = getCategoriesFrom(exercises);
   const categoryProgress = categories.map(cat => {
     const categoryExercises = exercises.filter(ex => ex.category === cat);
     const completedInCategory = categoryExercises.filter(ex => 
@@ -48,10 +50,11 @@ export default function ProfilePage() {
 
   const overallProgress = (userData.completedExercises / userData.totalExercises) * 100;
 
-  // show loading state
-  if (isLoading) {
+  // Wait for Firebase auth to resolve before deciding what to show.
+  // This prevents the brief "Please Sign In" flash on reload for logged-in users.
+  if (authLoading || (user && isLoading)) {
     return (
-      <div 
+      <div
         className="min-h-screen flex items-center justify-center"
         style={{ backgroundColor: theme.background.primary }}
       >
@@ -74,16 +77,16 @@ export default function ProfilePage() {
           <p className="mb-6" style={{ color: theme.text.tertiary }}>
             Sign in to view your progress
           </p>
-          <a 
+          <Link
             href="/login"
             className="inline-block px-6 py-3 rounded-lg font-semibold transition hover:opacity-90"
-            style={{ 
+            style={{
               backgroundColor: theme.accent.primary,
               color: 'white'
             }}
           >
             Sign In
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -230,17 +233,17 @@ export default function ProfilePage() {
 
         {/* BACK BUTTON */}
         <div className="mt-8">
-          <a 
+          <Link
             href="/"
             className="block w-full text-center py-4 rounded-lg font-semibold transition hover:opacity-80"
-            style={{ 
-              backgroundColor: theme.accent.tertiary,
+            style={{
+              backgroundColor: theme.background.tertiary,
               color: theme.accent.primary,
-              border: `1px solid${theme.border.default}`
+              border: `1px solid ${theme.border.default}`
             }}
           >
             Back to Skill Tree
-          </a>
+          </Link>
         </div>
 
       </div>

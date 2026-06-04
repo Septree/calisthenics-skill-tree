@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
 import { theme } from '../theme';
 
 export default function SignupPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,10 +23,18 @@ export default function SignupPage() {
       // create user account
       await createUserWithEmailAndPassword(auth, email, password);
       // redirect to home page on success
-      window.location.href = '/';
+      router.push('/');
     } catch (error) {
-      // show error message
-      setError(error.message);
+      // Map known codes to friendly copy; never surface raw Firebase messages.
+      if (error.code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists.');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (error.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
       setLoading(false);
     }
   };
@@ -57,14 +68,17 @@ export default function SignupPage() {
         <form onSubmit={handleSignup}>
           {/* Email Input */}
           <div className="mb-4">
-            <label 
+            <label
+              htmlFor="email"
               className="block mb-2 text-sm font-medium"
               style={{ color: theme.text.secondary }}
             >
               Email
             </label>
             <input
+              id="email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -80,14 +94,17 @@ export default function SignupPage() {
 
           {/* Password Input */}
           <div className="mb-6">
-            <label 
+            <label
+              htmlFor="password"
               className="block mb-2 text-sm font-medium"
               style={{ color: theme.text.secondary }}
             >
               Password
             </label>
             <input
+              id="password"
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -136,13 +153,13 @@ export default function SignupPage() {
           style={{ color: theme.text.tertiary }}
         >
           Already have an account?{' '}
-          <a 
+          <Link
             href="/login"
             style={{ color: theme.accent.primary }}
             className="font-medium hover:underline"
           >
             Log in
-          </a>
+          </Link>
         </p>
       </div>
     </div>

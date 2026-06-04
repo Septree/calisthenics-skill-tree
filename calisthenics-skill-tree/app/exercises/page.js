@@ -1,9 +1,12 @@
 'use client'
 
+import Link from 'next/link';
 import { theme } from '../theme';
-import { exercises } from '../exercises-data';
+import { useExercises } from '../useExercises';
+import ExerciseIcon from '../ExerciseIcon';
 
 export default function ExercisesPage() {
+  const { exercises } = useExercises();
   return (
     <div 
       className="min-h-screen"
@@ -36,30 +39,28 @@ export default function ExercisesPage() {
           
           {/* LOOP THROUGH EACH EXERCISE */}
           {exercises.map((exercise) => (
-          <a
+          <Link
             key={exercise.id}
             href={`/exercises/${exercise.id}`}
-            className="block rounded-lg p-6 transition-all duration-200 hover:scale-105"
+            className="block rounded-lg p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer"
             style={{
               backgroundColor: theme.background.secondary,
               border: `1px solid ${theme.border.default}`,
-              cursor: 'pointer'
             }}
           >
               {/* EXERCISE ICON */}
               <div className="flex justify-center mb-4">
-                <div 
-                  className="w-20 h-20 rounded-full flex items-center justify-center p-3"
-                  style={{ 
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center p-3 overflow-hidden"
+                  style={{
                     backgroundColor: theme.background.tertiary,
                     border: `2px solid ${theme.border.light}`
                   }}
                 >
-                  <img 
+                  <ExerciseIcon
                     src={exercise.icon}
-                    alt={exercise.name}
+                    name={exercise.name}
                     className="w-full h-full object-contain"
-                    style={{ filter: 'brightness(1.2)' }}
                   />
                 </div>
               </div>
@@ -97,29 +98,29 @@ export default function ExercisesPage() {
               </div>
 
               {/* SUMMARY */}
-              <p 
+              <p
                 className="text-sm text-center line-clamp-2"
                 style={{ color: theme.text.secondary }}
               >
                 {exercise.summary}
               </p>
-            </a>
+            </Link>
           ))}
 
         </div>
 
         {/* BACK BUTTON */}
         <div className="mt-8">
-          <a 
+          <Link
             href="/"
             className="block w-full text-center py-4 rounded-lg font-semibold transition hover:opacity-90"
-            style={{ 
+            style={{
               backgroundColor: theme.background.tertiary,
               color: theme.accent.primary,
             }}
           >
             Back to Skill Tree
-          </a>
+          </Link>
         </div>
       </div>
     </div>
