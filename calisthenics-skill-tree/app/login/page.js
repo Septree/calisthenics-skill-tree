@@ -48,9 +48,9 @@ export default function LoginPage() {
       className="min-h-screen flex items-center justify-center"
       style={{ backgroundColor: theme.background.primary }}
     >
-      <div 
-        className="w-full max-w-md p-8 rounded-lg"
-        style={{ 
+      <div
+        className="w-full max-w-md p-8 rounded-lg reveal-up"
+        style={{
           backgroundColor: theme.background.secondary,
           border: `1px solid ${theme.border.default}`
         }}

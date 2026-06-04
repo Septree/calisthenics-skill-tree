@@ -20,8 +20,8 @@ export default function ExercisesPage() {
           borderColor: theme.border.default 
         }}
       >
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <h1 
+        <div className="max-w-6xl mx-auto px-6 py-8 reveal-up">
+          <h1
             className="text-3xl font-bold mb-2"
             style={{ color: theme.text.primary }}
           >
@@ -38,11 +38,11 @@ export default function ExercisesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* LOOP THROUGH EACH EXERCISE */}
-          {exercises.map((exercise) => (
+          {exercises.map((exercise, i) => (
+          <div key={exercise.id} className="reveal-up" style={{ animationDelay: `${Math.min(i * 0.05, 0.4)}s` }}>
           <Link
-            key={exercise.id}
             href={`/exercises/${exercise.id}`}
-            className="block rounded-lg p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer"
+            className="block h-full rounded-lg p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer"
             style={{
               backgroundColor: theme.background.secondary,
               border: `1px solid ${theme.border.default}`,
@@ -105,6 +105,7 @@ export default function ExercisesPage() {
                 {exercise.summary}
               </p>
             </Link>
+            </div>
           ))}
 
         </div>
@@ -112,7 +113,7 @@ export default function ExercisesPage() {
         {/* BACK BUTTON */}
         <div className="mt-8">
           <Link
-            href="/"
+            href="/tree"
             className="block w-full text-center py-4 rounded-lg font-semibold transition hover:opacity-90"
             style={{
               backgroundColor: theme.background.tertiary,

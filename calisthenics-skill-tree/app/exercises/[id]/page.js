@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { theme } from '../../theme';
-import { useExercises } from '../../useExercises';
+import { useExercises, getEffectiveCompleted } from '../../useExercises';
 import ExerciseIcon from '../../ExerciseIcon';
 import { use, useState, useEffect } from 'react';
 import { useAuth } from '../../AuthContext';
@@ -38,8 +38,12 @@ export default function ExerciseDetailPage({ params }) {
   // drives the celebratory animation right after marking complete
   const [justCompleted, setJustCompleted] = useState(false);
 
-  // check if this exercise is completed
-  const isCompleted = isExerciseCompleted(completedExercises, exerciseId);
+  // actual = explicitly marked here; effective = also true if a later skill that
+  // depends on this one is complete (completing a skill completes its prereqs).
+  const isActual = isExerciseCompleted(completedExercises, exerciseId);
+  const effectiveCompleted = getEffectiveCompleted(completedExercises, exercises);
+  const isCompleted = effectiveCompleted.includes(exerciseId);
+  const derivedOnly = isCompleted && !isActual;
 
   // now we will fetch YouTube video when it loads
   useEffect(() => {
@@ -69,8 +73,8 @@ const handleMarkComplete = async () => {
 
   setIsMarkingComplete(true);
 
-  // toggle: if completed, mark incomplete. if incomplete, mark complete.
-  if (isCompleted) {
+  // toggle based on what's explicitly stored for THIS skill
+  if (isActual) {
     const success = await markExerciseIncomplete(user.uid, exerciseId);
     if (success) {
       // remove from local state
@@ -164,7 +168,7 @@ const handleMarkComplete = async () => {
       <div className="max-w-6xl mx-auto px-6 py-12">
         
         {/* TWO COLUMN LAYOUT */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 reveal-up">
           
           {/* LEFT COLUMN - Exercise Info */}
           <div>
@@ -316,11 +320,12 @@ const handleMarkComplete = async () => {
         </div>
 
         {/* INSTRUCTIONS SECTION */}
-        <div 
-          className="rounded-lg p-6 mb-8"
-          style={{ 
+        <div
+          className="rounded-lg p-6 mb-8 reveal-up"
+          style={{
             backgroundColor: theme.background.secondary,
-            border: `1px solid ${theme.border.default}`
+            border: `1px solid ${theme.border.default}`,
+            animationDelay: '0.08s',
           }}
         >
           <h2 
@@ -389,15 +394,22 @@ const handleMarkComplete = async () => {
             {user && (
               <button
                 onClick={handleMarkComplete}
-                disabled={isMarkingComplete}
-                className={`py-4 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${justCompleted ? 'animate-celebrate' : ''}`}
+                disabled={isMarkingComplete || derivedOnly}
+                title={derivedOnly ? 'Completed automatically because a skill that requires it is complete.' : undefined}
+                className={`py-4 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${justCompleted ? 'animate-celebrate' : ''}`}
                 style={{
                   backgroundColor: isCompleted ? theme.accent.success : theme.accent.primary,
                   color: 'white',
                   boxShadow: justCompleted ? `0 0 24px ${theme.accent.success}` : 'none',
                 }}
               >
-                {isMarkingComplete ? 'Saving...' : isCompleted ? '✓ Completed — tap to undo' : 'Mark as Complete'}
+                {isMarkingComplete
+                  ? 'Saving...'
+                  : derivedOnly
+                  ? '✓ Completed (via a later skill)'
+                  : isActual
+                  ? '✓ Completed — tap to undo'
+                  : 'Mark as Complete'}
               </button>
             )}
             

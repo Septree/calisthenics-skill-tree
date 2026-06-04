@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { theme } from '../theme';
-import { useExercises, getCategoriesFrom } from '../useExercises';
+import { useExercises, getCategoriesFrom, getEffectiveCompleted } from '../useExercises';
 import { useAuth } from '../AuthContext';
 import { getUserProgress } from '../db-helpers';
 
@@ -12,6 +12,12 @@ export default function ProfilePage() {
   const { exercises } = useExercises();
   const [completedExercises, setCompletedExercises] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  // lets the progress bars animate from 0 to their value on mount
+  const [barsReady, setBarsReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setBarsReady(true), 60);
+    return () => clearTimeout(t);
+  }, []);
 
   // load user progress
   useEffect(() => {
@@ -25,20 +31,23 @@ export default function ProfilePage() {
     }
   }, [user]);
 
+  // completing a skill also counts its prerequisites as complete
+  const effectiveCompleted = getEffectiveCompleted(completedExercises, exercises);
+
   // calculate real data
   const userData = {
     name: user ? user.email.split('@')[0] : "Guest",  // Username from email
     initials: user ? user.email.substring(0, 2).toUpperCase() : "GU",
     totalExercises: exercises.length,
-    completedExercises: completedExercises.length,  // Real count!
+    completedExercises: effectiveCompleted.length,
   };
 
   // calculate category progress with REAL data
   const categories = getCategoriesFrom(exercises);
   const categoryProgress = categories.map(cat => {
     const categoryExercises = exercises.filter(ex => ex.category === cat);
-    const completedInCategory = categoryExercises.filter(ex => 
-      completedExercises.includes(ex.id)
+    const completedInCategory = categoryExercises.filter(ex =>
+      effectiveCompleted.includes(ex.id)
     ).length;
 
     return {
@@ -100,7 +109,7 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         
         {/* HEADER */}
-        <div className="flex items-center gap-6 mb-12">
+        <div className="flex items-center gap-6 mb-12 reveal-up">
           <div 
             className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold"
             style={{ 
@@ -125,11 +134,12 @@ export default function ProfilePage() {
         </div>
 
         {/* STATS CARD */}
-        <div 
-          className="rounded-lg p-6 mb-8"
-          style={{ 
+        <div
+          className="rounded-lg p-6 mb-8 reveal-up"
+          style={{
             backgroundColor: theme.background.secondary,
-            border: `1px solid ${theme.border.default}`
+            border: `1px solid ${theme.border.default}`,
+            animationDelay: '0.08s',
           }}
         >
           <div className="text-center">
@@ -146,14 +156,15 @@ export default function ProfilePage() {
         </div>
 
         {/* OVERALL PROGRESS */}
-        <div 
-          className="rounded-lg p-6 mb-8"
-          style={{ 
+        <div
+          className="rounded-lg p-6 mb-8 reveal-up"
+          style={{
             backgroundColor: theme.background.secondary,
-            border: `1px solid ${theme.border.default}`
+            border: `1px solid ${theme.border.default}`,
+            animationDelay: '0.16s',
           }}
         >
-          <h2 
+          <h2
             className="text-xl font-bold mb-4"
             style={{ color: theme.text.primary }}
           >
@@ -172,11 +183,11 @@ export default function ProfilePage() {
             className="w-full rounded-full h-6"
             style={{ backgroundColor: theme.border.dark }}
           >
-            <div 
-              className="h-6 rounded-full transition-all duration-500 flex items-center justify-center text-white text-xs font-semibold"
-              style={{ 
-                width: `${overallProgress}%`,
-                backgroundColor: theme.accent.primary 
+            <div
+              className="h-6 rounded-full transition-all duration-700 flex items-center justify-center text-white text-xs font-semibold"
+              style={{
+                width: `${barsReady ? overallProgress : 0}%`,
+                backgroundColor: theme.accent.primary
               }}
             >
               {overallProgress > 5 && `${overallProgress.toFixed(0)}%`}
@@ -185,9 +196,10 @@ export default function ProfilePage() {
         </div>
 
         {/* CATEGORY PROGRESS */}
-        <div 
-          className="rounded-lg p-6"
-          style={{ 
+        <div
+          className="rounded-lg p-6 reveal-up"
+          style={{
+            animationDelay: '0.24s',
             backgroundColor: theme.background.secondary,
             border: `1px solid ${theme.border.default}`
           }}
@@ -217,11 +229,11 @@ export default function ProfilePage() {
                     className="w-full rounded-full h-3"
                     style={{ backgroundColor: theme.border.dark }}
                   >
-                    <div 
-                      className="h-3 rounded-full transition-all duration-500"
-                      style={{ 
-                        width: `${percentage}%`,
-                        backgroundColor: theme.accent.primary 
+                    <div
+                      className="h-3 rounded-full transition-all duration-700"
+                      style={{
+                        width: `${barsReady ? percentage : 0}%`,
+                        backgroundColor: theme.accent.primary
                       }}
                     />
                   </div>
@@ -234,7 +246,7 @@ export default function ProfilePage() {
         {/* BACK BUTTON */}
         <div className="mt-8">
           <Link
-            href="/"
+            href="/tree"
             className="block w-full text-center py-4 rounded-lg font-semibold transition hover:opacity-80"
             style={{
               backgroundColor: theme.background.tertiary,

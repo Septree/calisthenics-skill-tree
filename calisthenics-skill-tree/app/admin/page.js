@@ -12,6 +12,8 @@ import {
   addCustomExercise,
   updateCustomExercise,
   deleteCustomExercise,
+  getExerciseOverrides,
+  setExercisePosition,
 } from '../db-helpers';
 import { fileToCompressedDataUrl } from '../image-utils';
 
@@ -44,6 +46,10 @@ export default function AdminPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  // Position overrides for built-in skills (id -> {left, top}) + per-row draft/saving.
+  const [overrides, setOverrides] = useState({});
+  const [posDraft, setPosDraft] = useState({});
+  const [savingPosId, setSavingPosId] = useState(null);
 
   const allExercises = [...builtInExercises, ...custom];
 
@@ -52,11 +58,39 @@ export default function AdminPage() {
     getCustomExercises()
       .then(setCustom)
       .finally(() => setListLoading(false));
+    getExerciseOverrides().then(setOverrides);
   };
 
   useEffect(() => {
     if (isAdmin) reload();
   }, [isAdmin]);
+
+  // current left/top for a built-in: draft > saved override > code default
+  const posValue = (ex, axis) => {
+    const draft = posDraft[ex.id];
+    if (draft && draft[axis] !== undefined && draft[axis] !== '') return draft[axis];
+    if (overrides[ex.id]?.[axis] !== undefined) return overrides[ex.id][axis];
+    return ex.position?.[axis] ?? 0;
+  };
+
+  const setPosDraftField = (id, axis, value) =>
+    setPosDraft((d) => ({ ...d, [id]: { ...d[id], [axis]: value } }));
+
+  const handleSavePosition = async (ex) => {
+    setError('');
+    setSavingPosId(ex.id);
+    try {
+      const position = { left: Number(posValue(ex, 'left')) || 0, top: Number(posValue(ex, 'top')) || 0 };
+      await setExercisePosition(ex.id, position);
+      setOverrides((o) => ({ ...o, [ex.id]: position }));
+      setNotice(`Moved "${ex.name}" to (${position.left}, ${position.top}).`);
+    } catch (err) {
+      console.error(err);
+      setError('Could not save position.');
+    } finally {
+      setSavingPosId(null);
+    }
+  };
 
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -204,7 +238,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.background.primary }}>
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 reveal-up">
           <h1 className="text-4xl font-bold" style={{ color: theme.text.primary }}>
             Admin — Manage Skills
           </h1>
@@ -339,6 +373,33 @@ export default function AdminPage() {
             ))}
           </div>
         )}
+
+        {/* BUILT-IN POSITIONS — reposition any of the original skills on the tree */}
+        <h2 className="text-2xl font-bold mt-10 mb-2" style={{ color: theme.text.primary }}>Built-in skill positions</h2>
+        <p className="text-sm mb-4" style={{ color: theme.text.tertiary }}>
+          These skills are defined in code, but you can move them anywhere on the tree.
+        </p>
+        <div className="space-y-3">
+          {builtInExercises.map((ex) => (
+            <div key={ex.id} className="flex items-center gap-3 p-4 rounded-lg flex-wrap" style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}` }}>
+              <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ backgroundColor: theme.background.tertiary }}>
+                <ExerciseIcon src={ex.icon} name={ex.name} className="w-full h-full object-contain" />
+              </div>
+              <p className="font-semibold flex-1 min-w-[120px]" style={{ color: theme.text.primary }}>{ex.name}</p>
+              <label className="text-xs flex items-center gap-1" style={{ color: theme.text.tertiary }}>
+                left
+                <input type="number" value={posValue(ex, 'left')} onChange={(e) => setPosDraftField(ex.id, 'left', e.target.value)} className="w-20 px-2 py-1 rounded" style={{ backgroundColor: theme.background.tertiary, border: `1px solid ${theme.border.default}`, color: theme.text.primary }} />
+              </label>
+              <label className="text-xs flex items-center gap-1" style={{ color: theme.text.tertiary }}>
+                top
+                <input type="number" value={posValue(ex, 'top')} onChange={(e) => setPosDraftField(ex.id, 'top', e.target.value)} className="w-20 px-2 py-1 rounded" style={{ backgroundColor: theme.background.tertiary, border: `1px solid ${theme.border.default}`, color: theme.text.primary }} />
+              </label>
+              <button onClick={() => handleSavePosition(ex)} disabled={savingPosId === ex.id} className="text-sm px-4 py-1.5 rounded cursor-pointer hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: theme.accent.primary, color: 'white' }}>
+                {savingPosId === ex.id ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

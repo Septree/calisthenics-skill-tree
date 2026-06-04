@@ -104,3 +104,22 @@ export async function updateCustomExercise(docId, data) {
 export async function deleteCustomExercise(docId) {
   await deleteDoc(doc(db, 'exercises', docId));
 }
+
+// ----- Position overrides -----
+// Lets the admin reposition ANY skill (including built-ins defined in code).
+// Stored as a single map document: meta/positions = { "<id>": {left, top}, ... }
+
+export async function getExerciseOverrides() {
+  try {
+    const snap = await getDoc(doc(db, 'meta', 'positions'));
+    return snap.exists() ? snap.data() : {};
+  } catch (error) {
+    console.error('Error getting position overrides:', error);
+    return {};
+  }
+}
+
+export async function setExercisePosition(id, position) {
+  // merge so we only touch this one id's entry
+  await setDoc(doc(db, 'meta', 'positions'), { [String(id)]: position }, { merge: true });
+}

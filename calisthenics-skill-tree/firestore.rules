@@ -21,6 +21,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Position overrides for any skill (incl. built-ins). Public read, admin write.
+    match /meta/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Explicit deny-all for any other path (default, stated for clarity).
     match /{document=**} {
       allow read, write: if false;

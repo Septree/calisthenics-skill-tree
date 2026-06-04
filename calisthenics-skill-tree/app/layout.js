@@ -40,11 +40,11 @@ function Navigation() {
             <Link href="/" className={linkBase} style={{ color: theme.text.secondary }}>
               Home
             </Link>
+            <Link href="/tree" className={linkBase} style={{ color: theme.text.secondary }}>
+              Skill Tree
+            </Link>
             <Link href="/exercises" className={linkBase} style={{ color: theme.text.secondary }}>
               Exercises
-            </Link>
-            <Link href="/welcome" className={linkBase} style={{ color: theme.text.secondary }}>
-              Welcome
             </Link>
             <Link href="/profile" className={linkBase} style={{ color: theme.text.secondary }}>
               Profile

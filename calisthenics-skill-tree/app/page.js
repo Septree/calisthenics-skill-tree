@@ -1,232 +1,125 @@
 'use client'
 
-import { useState, useEffect} from 'react';
 import Link from 'next/link';
 import { theme } from './theme';
-import { useExercises } from './useExercises';
-import ExerciseIcon from './ExerciseIcon';
-import { useAuth } from './AuthContext';
-import { getUserProgress } from './db-helpers';
-import { getQuoteOfTheDay } from './quotes-data';
+
+const FEATURES = [
+  {
+    title: 'A visual skill tree',
+    body: 'See every calisthenics move as a node. Unlock harder skills by mastering their prerequisites — from your first push-up to the muscle-up.',
+  },
+  {
+    title: 'Track real progress',
+    body: 'Mark moves complete and watch your overall and per-category progress fill up. Your journey is saved to your account.',
+  },
+  {
+    title: 'Learn every move',
+    body: 'Each skill has its own page with a video tutorial pulled in automatically, so you always know what good form looks like.',
+  },
+];
+
+const STEPS = [
+  { n: '01', t: 'Create your account', d: 'Sign up in seconds — no equipment, no payment.' },
+  { n: '02', t: 'Pick a skill', d: 'Start at the base of the tree and work upward.' },
+  { n: '03', t: 'Train & check it off', d: 'Complete moves and unlock the next tier.' },
+];
+
 export default function Home() {
-  const [hoveredExercise, setHoveredExercise] = useState(null);
-  const { exercises } = useExercises();
-  const { user } = useAuth();
-  const [completedExercises, setCompletedExercises] = useState([]);
-  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
-  // Self-hosted "quote of the day" — no external API, picked deterministically per day.
-  const quote = getQuoteOfTheDay();
-  // calculate container height from whichever exercises are loaded
-  const containerHeight = Math.max(
-    800,
-    ...exercises.map(ex => (ex.position?.top ?? 0) + 180)
-  );
-
-  // load user progress
-  useEffect(() => {
-    if (user) {
-      getUserProgress(user.uid).then((progress) => {
-        setCompletedExercises(progress);
-        setIsLoadingProgress(false);
-      });
-    } else {
-      setIsLoadingProgress(false);
-    }
-  }, [user]);
-
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: theme.background.primary }}>
-  {/* INTRO TEXT */}
-  <div className="text-center pt-12 pb-4">
-    <h1 className="text-4xl font-bold mb-2" style={{ color: theme.text.primary }}>
-      Calisthenics Skill Tree
-    </h1>
-    <p className="text-lg mb-6" style={{ color: theme.text.tertiary }}>
-      Master your body, one move at a time
-    </p>
-
-    {/* QUOTE OF THE DAY */}
-    <div 
-      className="max-w-2xl mx-auto p-6 rounded-lg mb-6"
-      style={{ 
-        backgroundColor: theme.background.secondary,
-        border: `1px solid ${theme.border.default}`
-      }}
-    >
-      {quote ? (
-        <>
-          <p
-            className="text-sm uppercase tracking-wide mb-3"
-            style={{ color: theme.text.tertiary }}
-          >
-            Quote of the Day
-          </p>
-          <p
-            className="text-lg italic mb-3"
-            style={{ color: theme.text.primary }}
-          >
-            "{quote.quote}"
-          </p>
-          <p
-            className="text-sm"
-            style={{ color: theme.text.secondary }}
-          >
-            — {quote.author}
-          </p>
-        </>
-      ) : (
-        <p style={{ color: theme.text.tertiary }}>No quote available</p>
-      )}
-    </div>
-  </div>
-
-      {/* SKILL TREE CONTAINER (horizontally scrollable on small screens) */}
-      <div className="w-full overflow-x-auto pb-12">
-      <div className="relative mx-auto" style={{ width: '600px', minHeight: `${containerHeight}px` }}>
-
-        {/* SVG LINES */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-          {exercises.map((exercise) => {
-            return exercise.prerequisites.map((prereqId) => {
-              const prereq = exercises.find(e => e.id === prereqId);
-              if (!prereq) return null;
-
-              const nodeRadius = 40;
-              const prereqCenterX = prereq.position.left + nodeRadius;
-              const prereqCenterY = prereq.position.top + nodeRadius;
-              const exerciseCenterX = exercise.position.left + nodeRadius;
-              const exerciseCenterY = exercise.position.top + nodeRadius;
-              
-              const dx = exerciseCenterX - prereqCenterX;
-              const dy = exerciseCenterY - prereqCenterY;
-              const angle = Math.atan2(dy, dx);
-              
-              const prereqX = prereqCenterX + Math.cos(angle) * nodeRadius;
-              const prereqY = prereqCenterY + Math.sin(angle) * nodeRadius;
-              const exerciseX = exerciseCenterX - Math.cos(angle) * nodeRadius;
-              const exerciseY = exerciseCenterY - Math.sin(angle) * nodeRadius;
-              
-              return (
-                <line
-                  key={`${exercise.id}-${prereqId}`}
-                  x1={prereqX}
-                  y1={prereqY}
-                  x2={exerciseX}
-                  y2={exerciseY}
-                  stroke={theme.node.line}
-                  strokeWidth="2"
-                />
-              );
-            });
-          })}
-        </svg>
-
-        {/* NODES */}
-        {exercises.map((exercise) => (
-          <div
-            key={exercise.id}
-            className="absolute"
-            style={{
-              top: `${exercise.position.top}px`,
-              left: `${exercise.position.left}px`,
-            }}
-          >
+    <div className="min-h-screen overflow-hidden" style={{ backgroundColor: theme.background.primary }}>
+      {/* HERO */}
+      <section className="relative max-w-5xl mx-auto px-6 pt-24 pb-20 text-center">
+        {/* glow backdrop */}
+        <div
+          className="absolute left-1/2 top-10 -translate-x-1/2 w-[480px] h-[480px] rounded-full animate-float pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${theme.accent.primary}22 0%, transparent 70%)` }}
+          aria-hidden="true"
+        />
+        <p className="reveal-up text-sm uppercase tracking-[0.3em] mb-5" style={{ color: theme.accent.primary }}>
+          Bodyweight mastery
+        </p>
+        <h1 className="reveal-up text-6xl md:text-7xl font-bold mb-6 leading-none" style={{ color: theme.text.primary, animationDelay: '0.08s' }}>
+          Master your body,<br />one move at a time.
+        </h1>
+        <p className="reveal-up text-lg md:text-xl mb-10 max-w-2xl mx-auto" style={{ color: theme.text.tertiary, animationDelay: '0.16s' }}>
+          The Calisthenics Skill Tree turns bodyweight training into a game. Unlock skills, track progress, and level up — all the way to the muscle-up.
+        </p>
+        <div className="reveal-up flex flex-col sm:flex-row gap-4 justify-center" style={{ animationDelay: '0.24s' }}>
           <Link
-              href={`/exercises/${exercise.id}`}
-              aria-label={`${exercise.name}, ${exercise.difficulty}${completedExercises.includes(exercise.id) ? ', completed' : ''}`}
-              className="rounded-full transition-transform duration-200 hover:scale-110 cursor-pointer bg-transparent relative flex items-center justify-center"
+            href="/signup"
+            className="px-8 py-4 rounded-lg font-semibold text-lg transition-transform hover:-translate-y-0.5"
+            style={{ backgroundColor: theme.accent.primary, color: 'white' }}
+          >
+            Start training free
+          </Link>
+          <Link
+            href="/tree"
+            className="px-8 py-4 rounded-lg font-semibold text-lg transition-opacity hover:opacity-80"
+            style={{ backgroundColor: theme.background.tertiary, color: theme.text.primary, border: `1px solid ${theme.border.default}` }}
+          >
+            Explore the tree
+          </Link>
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section className="max-w-5xl mx-auto px-6 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {FEATURES.map((f, i) => (
+            <div
+              key={f.title}
+              className="reveal-up rounded-xl p-7"
               style={{
-                width: '80px',
-                height: '80px',
-                border: `2px solid ${theme.node.border}`,
-                opacity: completedExercises.includes(exercise.id) ? 1 : 0.5,
-                textDecoration: 'none',
+                backgroundColor: theme.background.secondary,
+                border: `1px solid ${theme.border.default}`,
+                animationDelay: `${0.1 * i}s`,
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.border = `2px solid ${theme.node.borderHover}`;
-                setHoveredExercise(exercise);
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.border = `2px solid ${theme.node.border}`;
-                setHoveredExercise(null);
-              }}
-              onFocus={() => setHoveredExercise(exercise)}
-              onBlur={() => setHoveredExercise(null)}
             >
-              <div className="w-full h-full flex items-center justify-center p-2 relative">
-                <ExerciseIcon
-                  src={exercise.icon}
-                  name={exercise.name}
-                  className="w-full h-full object-contain"
-                  style={{ fontSize: '1.25rem' }}
-                />
-
-                {/* Checkmark for completed exercises */}
-                {completedExercises.includes(exercise.id) && (
-                  <div
-                    className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold animate-pop"
-                    style={{
-                      backgroundColor: theme.accent.success,
-                      color: 'white',
-                      boxShadow: `0 0 0 2px ${theme.background.primary}`,
-                    }}
-                  >
-                    ✓
-                  </div>
-                )}
+              <div className="w-10 h-10 rounded-lg mb-4 flex items-center justify-center font-bold" style={{ backgroundColor: `${theme.accent.primary}22`, color: theme.accent.primary }}>
+                {i + 1}
               </div>
-            </Link>
+              <h3 className="text-xl font-bold mb-2" style={{ color: theme.text.primary }}>{f.title}</h3>
+              <p className="text-sm leading-relaxed" style={{ color: theme.text.secondary }}>{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-            {/* HOVER BOX */}
-            {hoveredExercise?.id === exercise.id && (
-              <div 
-                className="absolute left-1/2 transform -translate-x-1/2 pointer-events-none"
-                style={{
-                  bottom: '90px',
-                  animation: 'slideUp 0.15s ease-out',
-                }}
-              >
-                <div 
-                  className="rounded-lg px-4 py-2 shadow-xl whitespace-nowrap"
-                  style={{
-                    backgroundColor: theme.hoverBox.background,
-                    border: `1px solid ${theme.hoverBox.border}`,
-                  }}
-                >
-                  <div className="text-sm font-semibold mb-1" style={{ color: theme.text.primary }}>
-                    {exercise.name}
-                  </div>
-                  
-                  <div className="text-xs">
-                    <span 
-                      className="px-2 py-0.5 rounded"
-                      style={{
-                        backgroundColor: theme.hoverBox.badge.background,
-                        color: theme.hoverBox.badge.text,
-                        border: `1px solid ${theme.hoverBox.badge.border}`,
-                      }}
-                    >
-                      {exercise.difficulty}
-                    </span>
-                  </div>
+      {/* HOW IT WORKS */}
+      <section className="max-w-5xl mx-auto px-6 py-16">
+        <h2 className="text-4xl font-bold text-center mb-12" style={{ color: theme.text.primary }}>How it works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {STEPS.map((s, i) => (
+            <div key={s.n} className="reveal-up text-center" style={{ animationDelay: `${0.1 * i}s` }}>
+              <div className="text-5xl font-bold mb-3" style={{ color: theme.accent.primary }}>{s.n}</div>
+              <h3 className="text-xl font-bold mb-2" style={{ color: theme.text.primary }}>{s.t}</h3>
+              <p className="text-sm" style={{ color: theme.text.tertiary }}>{s.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-                  {/* Arrow */}
-                  <div 
-                    className="absolute left-1/2 transform -translate-x-1/2 w-0 h-0"
-                    style={{
-                      bottom: '-6px',
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderTop: `6px solid ${theme.hoverBox.background}`,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      </div>
+      {/* FINAL CTA */}
+      <section className="max-w-3xl mx-auto px-6 py-24 text-center">
+        <div
+          className="reveal-up rounded-2xl px-8 py-14"
+          style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.accent.primary}55` }}
+        >
+          <h2 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: theme.text.primary }}>
+            Ready to level up?
+          </h2>
+          <p className="mb-8 text-lg" style={{ color: theme.text.tertiary }}>
+            Your skill tree is waiting. Start with a single push-up.
+          </p>
+          <Link
+            href="/signup"
+            className="inline-block px-10 py-4 rounded-lg font-semibold text-lg transition-transform hover:-translate-y-0.5"
+            style={{ backgroundColor: theme.accent.primary, color: 'white' }}
+          >
+            Create your free account
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
