@@ -74,6 +74,48 @@ export const exercises = [
     prerequisites: [1],
     position: { left: -10, top: 300 }
   }*/
+
+  // ----- Legs category (high ids so they never clash with admin-added skills) -----
+  {
+    id: 101,
+    name: "Bodyweight Squats",
+    icon: "",
+    category: "legs",
+    difficulty: "Beginner",
+    summary: "The foundation of lower-body strength. Builds quads, glutes, and mobility.",
+    prerequisites: [],
+    position: { left: 620, top: 660 }
+  },
+  {
+    id: 102,
+    name: "Lunges",
+    icon: "",
+    category: "legs",
+    difficulty: "Beginner",
+    summary: "Single-leg strength and balance. Bridges to harder unilateral work.",
+    prerequisites: [101],
+    position: { left: 620, top: 510 }
+  },
+  {
+    id: 103,
+    name: "Bulgarian Split Squat",
+    icon: "",
+    category: "legs",
+    difficulty: "Intermediate",
+    summary: "Rear-foot-elevated split squat for serious single-leg strength.",
+    prerequisites: [102],
+    position: { left: 620, top: 360 }
+  },
+  {
+    id: 104,
+    name: "Pistol Squat",
+    icon: "",
+    category: "legs",
+    difficulty: "Advanced",
+    summary: "A full single-leg squat. The benchmark of lower-body control and strength.",
+    prerequisites: [103],
+    position: { left: 620, top: 210 }
+  }
 ];
 
 // Helper function to get exercise by ID

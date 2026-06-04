@@ -4,29 +4,57 @@ import { useState, useEffect } from 'react';
 import { exercises as builtInExercises } from './exercises-data';
 import { getCustomExercises, getExerciseOverrides } from './db-helpers';
 
-// Hybrid data source: the built-in exercises render immediately, then any
-// admin-created exercises (Firestore) + admin position overrides are merged in.
+// Session-level cache so the Firestore fetch happens once, not on every page
+// navigation. This is what made admin-added skills feel slow — each page was
+// re-fetching them. After the first load, subsequent pages render instantly.
+let _cache = null;        // { custom, overrides }
+let _inflight = null;     // shared in-flight promise
+
+// Call after any admin mutation so the next page load picks up fresh data.
+export function invalidateExercisesCache() {
+  _cache = null;
+  _inflight = null;
+}
+
+// Hybrid data source: built-ins render immediately; admin-created exercises
+// (Firestore) + position overrides are merged in once (and cached).
 export function useExercises() {
-  const [exercises, setExercises] = useState(builtInExercises);
-  const [loading, setLoading] = useState(true);
+  const [snapshot, setSnapshot] = useState(_cache);
+  const [loading, setLoading] = useState(!_cache);
 
   useEffect(() => {
+    if (_cache) {
+      setSnapshot(_cache);
+      setLoading(false);
+      return;
+    }
     let active = true;
-    Promise.all([getCustomExercises(), getExerciseOverrides()])
-      .then(([custom, overrides]) => {
-        if (!active) return;
-        // Apply any admin-set position override (keyed by exercise id).
-        const applyOverride = (ex) =>
-          overrides[ex.id] ? { ...ex, position: { ...ex.position, ...overrides[ex.id] } } : ex;
-        setExercises([...builtInExercises.map(applyOverride), ...custom.map(applyOverride)]);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    if (!_inflight) {
+      _inflight = Promise.all([getCustomExercises(), getExerciseOverrides()])
+        .then(([custom, overrides]) => {
+          _cache = { custom, overrides };
+          return _cache;
+        })
+        .finally(() => {
+          _inflight = null;
+        });
+    }
+    _inflight.then((c) => {
+      if (active) {
+        setSnapshot(c);
+        setLoading(false);
+      }
+    });
     return () => {
       active = false;
     };
   }, []);
+
+  const custom = snapshot?.custom ?? [];
+  const overrides = snapshot?.overrides ?? {};
+  const applyOverride = (ex) =>
+    overrides[ex.id] ? { ...ex, position: { ...ex.position, ...overrides[ex.id] } } : ex;
+  const exercises = [...builtInExercises.map(applyOverride), ...custom.map(applyOverride)];
 
   return { exercises, loading };
 }

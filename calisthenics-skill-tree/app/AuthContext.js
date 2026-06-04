@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
+import { getUserName, setUserName } from './db-helpers';
 
 // create context
 const AuthContext = createContext({});
@@ -13,17 +14,33 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [profileName, setProfileName] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        // prefer the user's chosen name; fall back to the email handle
+        const name = await getUserName(u.uid);
+        setProfileName(name || u.email.split('@')[0]);
+      } else {
+        setProfileName('');
+      }
       setLoading(false);
     });
 
     return unsubscribe;
   }, []);
+
+  // update the user's chosen display name
+  const saveName = async (name) => {
+    if (!user) return;
+    const trimmed = name.trim();
+    await setUserName(user.uid, trimmed);
+    setProfileName(trimmed || user.email.split('@')[0]);
+  };
 
   // logout function
   const logout = async () => {
@@ -36,7 +53,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, profileName, loading, logout, saveName }}>
       {children}
     </AuthContext.Provider>
   );

@@ -22,8 +22,8 @@ export default function LoginPage() {
     try {
       // sign in user
       await signInWithEmailAndPassword(auth, email, password);
-      // redirect to home page on success
-      router.push('/');
+      // redirect into the app on success
+      router.push('/tree');
     } catch (error) {
       // Generic message for all credential errors so we don't reveal whether an
       // email is registered (prevents user enumeration). Keep rate-limit hint useful.

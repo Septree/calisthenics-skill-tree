@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { theme } from '../theme';
 import { useAuth } from '../AuthContext';
 import { exercises as builtInExercises } from '../exercises-data';
-import { getNextExerciseId } from '../useExercises';
+import { getNextExerciseId, invalidateExercisesCache } from '../useExercises';
 import ExerciseIcon from '../ExerciseIcon';
 import {
   getCustomExercises,
@@ -83,6 +83,7 @@ export default function AdminPage() {
       const position = { left: Number(posValue(ex, 'left')) || 0, top: Number(posValue(ex, 'top')) || 0 };
       await setExercisePosition(ex.id, position);
       setOverrides((o) => ({ ...o, [ex.id]: position }));
+      invalidateExercisesCache();
       setNotice(`Moved "${ex.name}" to (${position.left}, ${position.top}).`);
     } catch (err) {
       console.error(err);
@@ -176,6 +177,7 @@ export default function AdminPage() {
         await addCustomExercise(data);
         setNotice(`Added "${data.name}". Its page is live at /exercises/${data.id}.`);
       }
+      invalidateExercisesCache();
       resetForm();
       reload();
     } catch (err) {
@@ -190,6 +192,7 @@ export default function AdminPage() {
     if (!confirm(`Delete "${ex.name}"? This removes its page too.`)) return;
     try {
       await deleteCustomExercise(ex._docId);
+      invalidateExercisesCache();
       setNotice(`Deleted "${ex.name}".`);
       reload();
     } catch (err) {

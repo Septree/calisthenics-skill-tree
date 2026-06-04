@@ -8,10 +8,24 @@ import { useAuth } from '../AuthContext';
 import { getUserProgress } from '../db-helpers';
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, profileName, saveName } = useAuth();
   const { exercises } = useExercises();
   const [completedExercises, setCompletedExercises] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  // display-name editing
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
+
+  const handleSaveName = async () => {
+    setSavingName(true);
+    try {
+      await saveName(nameDraft);
+      setEditingName(false);
+    } finally {
+      setSavingName(false);
+    }
+  };
   // lets the progress bars animate from 0 to their value on mount
   const [barsReady, setBarsReady] = useState(false);
   useEffect(() => {
@@ -35,9 +49,10 @@ export default function ProfilePage() {
   const effectiveCompleted = getEffectiveCompleted(completedExercises, exercises);
 
   // calculate real data
+  const displayName = profileName || (user ? user.email.split('@')[0] : 'Guest');
   const userData = {
-    name: user ? user.email.split('@')[0] : "Guest",  // Username from email
-    initials: user ? user.email.substring(0, 2).toUpperCase() : "GU",
+    name: displayName,
+    initials: displayName.substring(0, 2).toUpperCase(),
     totalExercises: exercises.length,
     completedExercises: effectiveCompleted.length,
   };
@@ -120,13 +135,52 @@ export default function ProfilePage() {
             {userData.initials}
           </div>
 
-          <div>
-            <h1 
-              className="text-3xl font-bold mb-1"
-              style={{ color: theme.text.primary }}
-            >
-              {userData.name}
-            </h1>
+          <div className="flex-1">
+            {editingName ? (
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <input
+                  type="text"
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  autoFocus
+                  className="px-3 py-2 rounded-lg text-lg"
+                  style={{
+                    backgroundColor: theme.background.tertiary,
+                    border: `1px solid ${theme.border.default}`,
+                    color: theme.text.primary,
+                  }}
+                  placeholder="Your name"
+                />
+                <button
+                  onClick={handleSaveName}
+                  disabled={savingName}
+                  className="px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer hover:opacity-90 disabled:opacity-50"
+                  style={{ backgroundColor: theme.accent.primary, color: 'white' }}
+                >
+                  {savingName ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={() => setEditingName(false)}
+                  className="px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer hover:opacity-80"
+                  style={{ color: theme.text.tertiary }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-3xl font-bold" style={{ color: theme.text.primary }}>
+                  {userData.name}
+                </h1>
+                <button
+                  onClick={() => { setNameDraft(profileName); setEditingName(true); }}
+                  className="text-sm cursor-pointer hover:underline"
+                  style={{ color: theme.accent.primary }}
+                >
+                  Edit
+                </button>
+              </div>
+            )}
             <p style={{ color: theme.text.tertiary }}>
               {userData.completedExercises} / {userData.totalExercises} exercises completed
             </p>

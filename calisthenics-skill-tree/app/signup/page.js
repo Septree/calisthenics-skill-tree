@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
+import { setUserName } from '../db-helpers';
 import { theme } from '../theme';
 
 export default function SignupPage() {
   const router = useRouter();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,9 +23,13 @@ export default function SignupPage() {
 
     try {
       // create user account
-      await createUserWithEmailAndPassword(auth, email, password);
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      // save the chosen display name
+      if (name.trim()) {
+        await setUserName(cred.user.uid, name.trim());
+      }
       // redirect to home page on success
-      router.push('/');
+      router.push('/tree');
     } catch (error) {
       // Map known codes to friendly copy; never surface raw Firebase messages.
       if (error.code === 'auth/email-already-in-use') {
@@ -66,6 +72,32 @@ export default function SignupPage() {
 
         {/* Signup Form */}
         <form onSubmit={handleSignup}>
+          {/* Name Input */}
+          <div className="mb-4">
+            <label
+              htmlFor="name"
+              className="block mb-2 text-sm font-medium"
+              style={{ color: theme.text.secondary }}
+            >
+              Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="w-full px-4 py-3 rounded-lg"
+              style={{
+                backgroundColor: theme.background.tertiary,
+                border: `1px solid ${theme.border.default}`,
+                color: theme.text.primary,
+              }}
+              placeholder="What should we call you?"
+            />
+          </div>
+
           {/* Email Input */}
           <div className="mb-4">
             <label

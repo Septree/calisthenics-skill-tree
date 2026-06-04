@@ -74,6 +74,21 @@ export function isExerciseCompleted(completedExercises, exerciseId) {
   return completedExercises.includes(exerciseId);
 }
 
+// ----- Display name (stored on the user's own doc) -----
+export async function getUserName(userId) {
+  try {
+    const snap = await getDoc(doc(db, 'users', userId));
+    return snap.exists() ? (snap.data().name || '') : '';
+  } catch (error) {
+    console.error('Error getting user name:', error);
+    return '';
+  }
+}
+
+export async function setUserName(userId, name) {
+  await setDoc(doc(db, 'users', userId), { name }, { merge: true });
+}
+
 // ----- Custom exercises (admin-managed, stored in Firestore) -----
 // These are merged on top of the built-in exercises in exercises-data.js.
 
