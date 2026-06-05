@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from './firebase';
 import { getUserName, setUserName } from './db-helpers';
 
@@ -34,6 +34,22 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
+  // sign in with Google; seed the display name from the Google profile on first sign-in
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    try {
+      const existing = await getUserName(result.user.uid);
+      if (!existing && result.user.displayName) {
+        await setUserName(result.user.uid, result.user.displayName);
+        setProfileName(result.user.displayName);
+      }
+    } catch {
+      // non-fatal — name can still be set later in the profile
+    }
+    return result;
+  };
+
   // update the user's chosen display name
   const saveName = async (name) => {
     if (!user) return;
@@ -53,7 +69,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profileName, loading, logout, saveName }}>
+    <AuthContext.Provider value={{ user, profileName, loading, logout, saveName, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );

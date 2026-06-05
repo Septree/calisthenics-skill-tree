@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
 import { theme } from '../theme';
+import GoogleSignInButton from '../GoogleSignInButton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -62,12 +63,20 @@ export default function LoginPage() {
         >
           Welcome Back
         </h1>
-        <p 
+        <p
           className="text-center mb-8"
           style={{ color: theme.text.tertiary }}
         >
           Log in to continue tracking your progress
         </p>
+
+        <GoogleSignInButton />
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px" style={{ backgroundColor: theme.border.default }} />
+          <span className="text-xs uppercase tracking-wide" style={{ color: theme.text.tertiary }}>or</span>
+          <div className="flex-1 h-px" style={{ backgroundColor: theme.border.default }} />
+        </div>
 
         {/* Login Form */}
         <form onSubmit={handleLogin}>
