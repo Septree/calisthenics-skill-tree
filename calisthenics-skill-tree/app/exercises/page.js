@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { theme } from '../theme';
 import { useExercises } from '../useExercises';
 import ExerciseIcon from '../ExerciseIcon';
+import Skeleton from '../Skeleton';
 
 export default function ExercisesPage() {
-  const { exercises } = useExercises();
+  const { exercises, loading } = useExercises();
   return (
     <div 
       className="min-h-screen"
@@ -105,6 +106,16 @@ export default function ExercisesPage() {
                 {exercise.summary}
               </p>
             </Link>
+            </div>
+          ))}
+
+          {/* skeleton cards while admin-added skills load in */}
+          {loading && [0, 1, 2].map((i) => (
+            <div key={`sk-${i}`} className="rounded-lg p-6" style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}` }}>
+              <div className="flex justify-center mb-4"><Skeleton className="w-20 h-20 rounded-full" /></div>
+              <Skeleton className="h-5 w-2/3 mx-auto mb-3" />
+              <Skeleton className="h-4 w-1/3 mx-auto mb-3" />
+              <Skeleton className="h-3 w-full" />
             </div>
           ))}
 

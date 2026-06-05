@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Skeleton from '../Skeleton';
 import { theme } from '../theme';
 import { useExercises, getCategoriesFrom, getEffectiveCompleted } from '../useExercises';
 import { useAuth } from '../AuthContext';
@@ -77,12 +78,35 @@ export default function ProfilePage() {
   // Wait for Firebase auth to resolve before deciding what to show.
   // This prevents the brief "Please Sign In" flash on reload for logged-in users.
   if (authLoading || (user && isLoading)) {
+    const card = { backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}` };
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: theme.background.primary }}
-      >
-        <p style={{ color: theme.text.tertiary }}>Loading progress...</p>
+      <div className="min-h-screen" style={{ backgroundColor: theme.background.primary }}>
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <div className="flex items-center gap-6 mb-12">
+            <Skeleton className="w-20 h-20 rounded-full" />
+            <div className="flex-1">
+              <Skeleton className="h-8 w-48 mb-2" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+          </div>
+          <div className="rounded-lg p-6 mb-8" style={card}>
+            <Skeleton className="h-12 w-24 mx-auto mb-2" />
+            <Skeleton className="h-4 w-40 mx-auto" />
+          </div>
+          <div className="rounded-lg p-6 mb-8" style={card}>
+            <Skeleton className="h-6 w-40 mb-4" />
+            <Skeleton className="h-6 w-full" />
+          </div>
+          <div className="rounded-lg p-6" style={card}>
+            <Skeleton className="h-6 w-48 mb-6" />
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="mb-4">
+                <Skeleton className="h-4 w-32 mb-2" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

@@ -14,8 +14,11 @@ import {
   deleteCustomExercise,
   getExerciseOverrides,
   setExercisePosition,
+  getVideoOverrides,
+  setExerciseVideo,
 } from '../db-helpers';
 import { fileToCompressedDataUrl } from '../image-utils';
+import { parseYouTubeId } from '../youtube-utils';
 
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 const DIFFICULTIES = ['Beginner', 'Intermediate', 'Advanced'];
@@ -27,6 +30,7 @@ const EMPTY_FORM = {
   category: '',
   difficulty: 'Beginner',
   summary: '',
+  video: '',
   left: 150,
   top: 360,
   prerequisites: [],
@@ -46,9 +50,11 @@ export default function AdminPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  // Position overrides for built-in skills (id -> {left, top}) + per-row draft/saving.
+  // Overrides for built-in skills + per-row drafts/saving.
   const [overrides, setOverrides] = useState({});
+  const [videoOverrides, setVideoOverrides] = useState({});
   const [posDraft, setPosDraft] = useState({});
+  const [videoDraft, setVideoDraft] = useState({});
   const [savingPosId, setSavingPosId] = useState(null);
 
   const allExercises = [...builtInExercises, ...custom];
@@ -59,6 +65,7 @@ export default function AdminPage() {
       .then(setCustom)
       .finally(() => setListLoading(false));
     getExerciseOverrides().then(setOverrides);
+    getVideoOverrides().then(setVideoOverrides);
   };
 
   useEffect(() => {
@@ -76,18 +83,27 @@ export default function AdminPage() {
   const setPosDraftField = (id, axis, value) =>
     setPosDraft((d) => ({ ...d, [id]: { ...d[id], [axis]: value } }));
 
-  const handleSavePosition = async (ex) => {
+  // current video input for a built-in: draft > saved override
+  const videoValue = (ex) => {
+    if (videoDraft[ex.id] !== undefined) return videoDraft[ex.id];
+    return videoOverrides[ex.id] ?? '';
+  };
+
+  const handleSaveBuiltin = async (ex) => {
     setError('');
     setSavingPosId(ex.id);
     try {
       const position = { left: Number(posValue(ex, 'left')) || 0, top: Number(posValue(ex, 'top')) || 0 };
+      const videoId = parseYouTubeId(videoValue(ex));
       await setExercisePosition(ex.id, position);
+      await setExerciseVideo(ex.id, videoId);
       setOverrides((o) => ({ ...o, [ex.id]: position }));
+      setVideoOverrides((v) => ({ ...v, [ex.id]: videoId }));
       invalidateExercisesCache();
-      setNotice(`Moved "${ex.name}" to (${position.left}, ${position.top}).`);
+      setNotice(`Saved "${ex.name}".`);
     } catch (err) {
       console.error(err);
-      setError('Could not save position.');
+      setError('Could not save. Check your admin permissions.');
     } finally {
       setSavingPosId(null);
     }
@@ -117,6 +133,7 @@ export default function AdminPage() {
       category: ex.category || '',
       difficulty: ex.difficulty || 'Beginner',
       summary: ex.summary || '',
+      video: ex.videoId || '',
       left: ex.position?.left ?? 150,
       top: ex.position?.top ?? 360,
       prerequisites: ex.prerequisites || [],
@@ -166,6 +183,7 @@ export default function AdminPage() {
         difficulty: form.difficulty,
         summary: form.summary.trim(),
         icon: iconUrl || '',
+        videoId: parseYouTubeId(form.video),
         position: { left: Number(form.left) || 0, top: Number(form.top) || 0 },
         prerequisites: form.prerequisites,
       };
@@ -291,6 +309,12 @@ export default function AdminPage() {
             <textarea id="summary" value={form.summary} onChange={(e) => setField('summary', e.target.value)} rows={2} className="w-full px-3 py-2 rounded-lg" style={inputStyle} placeholder="Short description of the movement." />
           </Field>
 
+          <div className="mt-4">
+            <Field label="YouTube video (URL or ID)" htmlFor="video">
+              <input id="video" type="text" value={form.video} onChange={(e) => setField('video', e.target.value)} className="w-full px-3 py-2 rounded-lg" style={inputStyle} placeholder="https://youtube.com/watch?v=… or the 11-char ID" />
+            </Field>
+          </div>
+
           <div className="grid grid-cols-2 gap-4 my-4">
             <Field label="Tree position — left (px)" htmlFor="left">
               <input id="left" type="number" value={form.left} onChange={(e) => setField('left', e.target.value)} className="w-full px-3 py-2 rounded-lg" style={inputStyle} />
@@ -377,10 +401,10 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* BUILT-IN POSITIONS — reposition any of the original skills on the tree */}
-        <h2 className="text-2xl font-bold mt-10 mb-2" style={{ color: theme.text.primary }}>Built-in skill positions</h2>
+        {/* BUILT-IN SKILLS — reposition + set the video for any original skill */}
+        <h2 className="text-2xl font-bold mt-10 mb-2" style={{ color: theme.text.primary }}>Built-in skills</h2>
         <p className="text-sm mb-4" style={{ color: theme.text.tertiary }}>
-          These skills are defined in code, but you can move them anywhere on the tree.
+          These skills are defined in code, but you can move them on the tree and set their YouTube video.
         </p>
         <div className="space-y-3">
           {builtInExercises.map((ex) => (
@@ -388,7 +412,7 @@ export default function AdminPage() {
               <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ backgroundColor: theme.background.tertiary }}>
                 <ExerciseIcon src={ex.icon} name={ex.name} className="w-full h-full object-contain" />
               </div>
-              <p className="font-semibold flex-1 min-w-[120px]" style={{ color: theme.text.primary }}>{ex.name}</p>
+              <p className="font-semibold w-full sm:w-auto sm:flex-1 min-w-[120px]" style={{ color: theme.text.primary }}>{ex.name}</p>
               <label className="text-xs flex items-center gap-1" style={{ color: theme.text.tertiary }}>
                 left
                 <input type="number" value={posValue(ex, 'left')} onChange={(e) => setPosDraftField(ex.id, 'left', e.target.value)} className="w-20 px-2 py-1 rounded" style={{ backgroundColor: theme.background.tertiary, border: `1px solid ${theme.border.default}`, color: theme.text.primary }} />
@@ -397,7 +421,15 @@ export default function AdminPage() {
                 top
                 <input type="number" value={posValue(ex, 'top')} onChange={(e) => setPosDraftField(ex.id, 'top', e.target.value)} className="w-20 px-2 py-1 rounded" style={{ backgroundColor: theme.background.tertiary, border: `1px solid ${theme.border.default}`, color: theme.text.primary }} />
               </label>
-              <button onClick={() => handleSavePosition(ex)} disabled={savingPosId === ex.id} className="text-sm px-4 py-1.5 rounded cursor-pointer hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: theme.accent.primary, color: 'white' }}>
+              <input
+                type="text"
+                value={videoValue(ex)}
+                onChange={(e) => setVideoDraft((d) => ({ ...d, [ex.id]: e.target.value }))}
+                placeholder="YouTube URL or ID"
+                className="flex-1 min-w-[160px] px-2 py-1 rounded text-sm"
+                style={{ backgroundColor: theme.background.tertiary, border: `1px solid ${theme.border.default}`, color: theme.text.primary }}
+              />
+              <button onClick={() => handleSaveBuiltin(ex)} disabled={savingPosId === ex.id} className="text-sm px-4 py-1.5 rounded cursor-pointer hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: theme.accent.primary, color: 'white' }}>
                 {savingPosId === ex.id ? 'Saving...' : 'Save'}
               </button>
             </div>

@@ -1,7 +1,12 @@
-'use client'
-
 import Link from 'next/link';
 import { theme } from './theme';
+import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION } from './site';
+
+export const metadata = {
+  title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: '/' },
+};
 
 const FEATURES = [
   {
@@ -24,9 +29,35 @@ const STEPS = [
   { n: '03', t: 'Train & check it off', d: 'Complete moves and unlock the next tier.' },
 ];
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+    },
+    {
+      '@type': 'WebApplication',
+      name: SITE_NAME,
+      url: SITE_URL,
+      applicationCategory: 'HealthApplication',
+      operatingSystem: 'Web',
+      description: SITE_DESCRIPTION,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    },
+  ],
+};
+
 export default function Home() {
   return (
     <div className="min-h-screen overflow-hidden" style={{ backgroundColor: theme.background.primary }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* HERO */}
       <section className="relative max-w-5xl mx-auto px-6 pt-24 pb-20 text-center">
         {/* glow backdrop */}

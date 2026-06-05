@@ -138,3 +138,20 @@ export async function setExercisePosition(id, position) {
   // merge so we only touch this one id's entry
   await setDoc(doc(db, 'meta', 'positions'), { [String(id)]: position }, { merge: true });
 }
+
+// ----- Video overrides -----
+// YouTube video id per skill (incl. built-ins). meta/videos = { "<id>": "<videoId>" }
+
+export async function getVideoOverrides() {
+  try {
+    const snap = await getDoc(doc(db, 'meta', 'videos'));
+    return snap.exists() ? snap.data() : {};
+  } catch (error) {
+    console.error('Error getting video overrides:', error);
+    return {};
+  }
+}
+
+export async function setExerciseVideo(id, videoId) {
+  await setDoc(doc(db, 'meta', 'videos'), { [String(id)]: videoId }, { merge: true });
+}

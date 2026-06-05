@@ -1,8 +1,6 @@
 rules_version = '2';
 
 // Least-privilege rules for the Calisthenics Skill Tree.
-// A signed-in user may read and write ONLY their own progress document.
-// Everything else is denied by default.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -12,22 +10,46 @@ service cloud.firestore {
         && request.auth.token.email == 'septrealdakheel@gmail.com';
     }
 
+    // A user doc may only contain these fields, with sane size limits.
+    function validUser() {
+      return request.resource.data.keys().hasOnly(['completedExercises', 'name'])
+        && (!('name' in request.resource.data)
+          || (request.resource.data.name is string && request.resource.data.name.size() <= 60))
+        && (!('completedExercises' in request.resource.data)
+          || (request.resource.data.completedExercises is list
+            && request.resource.data.completedExercises.size() <= 5000));
+    }
+
+    // Skill docs: cap text + image sizes to prevent abuse / oversized docs.
+    function validExercise() {
+      return request.resource.data.name is string
+        && request.resource.data.name.size() <= 120
+        && (!('icon' in request.resource.data)
+          || (request.resource.data.icon is string && request.resource.data.icon.size() <= 1500000))
+        && (!('summary' in request.resource.data)
+          || (request.resource.data.summary is string && request.resource.data.summary.size() <= 4000))
+        && (!('videoId' in request.resource.data)
+          || (request.resource.data.videoId is string && request.resource.data.videoId.size() <= 64));
+    }
+
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid && validUser();
     }
 
     match /exercises/{exerciseId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && validExercise();
+      allow delete: if isAdmin();
     }
 
-    // Position overrides for any skill (incl. built-ins). Public read, admin write.
+    // Position/video overrides for any skill (incl. built-ins). Public read, admin write.
     match /meta/{document} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Explicit deny-all for any other path (default, stated for clarity).
+    // Explicit deny-all for any other path.
     match /{document=**} {
       allow read, write: if false;
     }

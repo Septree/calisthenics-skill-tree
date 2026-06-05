@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { exercises as builtInExercises } from './exercises-data';
-import { getCustomExercises, getExerciseOverrides } from './db-helpers';
+import { getCustomExercises, getExerciseOverrides, getVideoOverrides } from './db-helpers';
 
 // Session-level cache so the Firestore fetch happens once, not on every page
 // navigation. This is what made admin-added skills feel slow — each page was
@@ -30,9 +30,9 @@ export function useExercises() {
     }
     let active = true;
     if (!_inflight) {
-      _inflight = Promise.all([getCustomExercises(), getExerciseOverrides()])
-        .then(([custom, overrides]) => {
-          _cache = { custom, overrides };
+      _inflight = Promise.all([getCustomExercises(), getExerciseOverrides(), getVideoOverrides()])
+        .then(([custom, overrides, videos]) => {
+          _cache = { custom, overrides, videos };
           return _cache;
         })
         .finally(() => {
@@ -52,8 +52,12 @@ export function useExercises() {
 
   const custom = snapshot?.custom ?? [];
   const overrides = snapshot?.overrides ?? {};
-  const applyOverride = (ex) =>
-    overrides[ex.id] ? { ...ex, position: { ...ex.position, ...overrides[ex.id] } } : ex;
+  const videos = snapshot?.videos ?? {};
+  const applyOverride = (ex) => {
+    const position = overrides[ex.id] ? { ...ex.position, ...overrides[ex.id] } : ex.position;
+    const videoId = videos[ex.id] ?? ex.videoId ?? null;
+    return { ...ex, position, videoId };
+  };
   const exercises = [...builtInExercises.map(applyOverride), ...custom.map(applyOverride)];
 
   return { exercises, loading };
