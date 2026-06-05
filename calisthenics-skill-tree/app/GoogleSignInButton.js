@@ -18,10 +18,17 @@ export default function GoogleSignInButton() {
       await loginWithGoogle();
       router.push('/tree');
     } catch (e) {
-      // user closing the popup isn't an error worth showing
-      if (e?.code !== 'auth/popup-closed-by-user' && e?.code !== 'auth/cancelled-popup-request') {
-        setError('Could not sign in with Google. Please try again.');
-      }
+      console.error('Google sign-in error:', e?.code, e);
+      const messages = {
+        'auth/popup-closed-by-user': '',
+        'auth/cancelled-popup-request': '',
+        'auth/operation-not-allowed': 'Google sign-in isn’t enabled for this project yet (enable it in Firebase → Authentication).',
+        'auth/unauthorized-domain': 'This domain isn’t authorized in Firebase Authentication settings.',
+        'auth/popup-blocked': 'Your browser blocked the sign-in popup. Allow popups for this site and try again.',
+        'auth/network-request-failed': 'Network error — check your connection and try again.',
+      };
+      const msg = e?.code in messages ? messages[e.code] : `Could not sign in with Google (${e?.code || 'unknown error'}).`;
+      if (msg) setError(msg);
       setLoading(false);
     }
   };

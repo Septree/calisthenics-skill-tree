@@ -75,20 +75,13 @@ export default function Home() {
         <p className="reveal-up text-lg md:text-xl mb-10 max-w-2xl mx-auto" style={{ color: theme.text.tertiary, animationDelay: '0.16s' }}>
           The Calisthenics Skill Tree turns bodyweight training into a game. Unlock skills, track progress, and level up — all the way to the muscle-up.
         </p>
-        <div className="reveal-up flex flex-col sm:flex-row gap-4 justify-center" style={{ animationDelay: '0.24s' }}>
+        <div className="reveal-up flex justify-center" style={{ animationDelay: '0.24s' }}>
           <Link
-            href="/signup"
+            href="/tree"
             className="px-8 py-4 rounded-lg font-semibold text-lg transition-transform hover:-translate-y-0.5"
             style={{ backgroundColor: theme.accent.primary, color: 'white' }}
           >
-            Start training free
-          </Link>
-          <Link
-            href="/tree"
-            className="px-8 py-4 rounded-lg font-semibold text-lg transition-opacity hover:opacity-80"
-            style={{ backgroundColor: theme.background.tertiary, color: theme.text.primary, border: `1px solid ${theme.border.default}` }}
-          >
-            Explore the tree
+            Explore the skill tree
           </Link>
         </div>
       </section>
