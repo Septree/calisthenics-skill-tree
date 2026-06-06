@@ -51,8 +51,11 @@ export default async function ExerciseDetailPage({ params }) {
     .filter(Boolean);
   const unlocks = all.filter((e) => (e.prerequisites || []).includes(exercise.id));
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
+  const instructions = exercise.instructions || [];
+  const mistakes = exercise.mistakes || [];
+  const tips = exercise.tips || [];
+
+  const breadcrumb = {
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
@@ -60,6 +63,18 @@ export default async function ExerciseDetailPage({ params }) {
       { '@type': 'ListItem', position: 3, name: exercise.name, item: `${SITE_URL}/exercises/${exercise.id}` },
     ],
   };
+
+  // Only emit a HowTo when there are real steps (an empty HowTo is invalid).
+  const graph = [breadcrumb];
+  if (instructions.length > 0) {
+    graph.push({
+      '@type': 'HowTo',
+      name: `How to do ${exercise.name}`,
+      description: exercise.summary || `How to perform the ${exercise.name} calisthenics skill.`,
+      step: instructions.map((text, i) => ({ '@type': 'HowToStep', position: i + 1, text })),
+    });
+  }
+  const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
 
   const badge = (text, opts = {}) => (
     <span
@@ -167,6 +182,58 @@ export default async function ExerciseDetailPage({ params }) {
             </div>
           )}
         </div>
+
+        {/* HOW TO PERFORM */}
+        {instructions.length > 0 && (
+          <div className="rounded-lg p-6 mb-8 reveal-up" style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}`, animationDelay: '0.12s' }}>
+            <h2 className="text-xl font-bold mb-4" style={{ color: theme.text.primary }}>How to perform {exercise.name}</h2>
+            <ol className="space-y-3">
+              {instructions.map((step, i) => (
+                <li key={i} className="flex gap-3 leading-relaxed" style={{ color: theme.text.secondary }}>
+                  <span
+                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+                    style={{ backgroundColor: `${theme.accent.primary}22`, color: theme.accent.primary }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="pt-0.5">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {/* COMMON MISTAKES + PRO TIPS */}
+        {(mistakes.length > 0 || tips.length > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {mistakes.length > 0 && (
+              <div className="rounded-lg p-6 reveal-up" style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}` }}>
+                <h2 className="text-lg font-bold mb-3" style={{ color: theme.text.primary }}>Common mistakes</h2>
+                <ul className="space-y-2">
+                  {mistakes.map((m, i) => (
+                    <li key={i} className="flex gap-2 leading-relaxed" style={{ color: theme.text.secondary }}>
+                      <span style={{ color: '#ef4444' }}>✕</span>
+                      <span>{m}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {tips.length > 0 && (
+              <div className="rounded-lg p-6 reveal-up" style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}`, animationDelay: '0.08s' }}>
+                <h2 className="text-lg font-bold mb-3" style={{ color: theme.text.primary }}>Pro tips</h2>
+                <ul className="space-y-2">
+                  {tips.map((t, i) => (
+                    <li key={i} className="flex gap-2 leading-relaxed" style={{ color: theme.text.secondary }}>
+                      <span style={{ color: theme.accent.primary }}>✓</span>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ACTIONS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 reveal-up" style={{ animationDelay: '0.16s' }}>

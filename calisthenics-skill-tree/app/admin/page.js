@@ -31,11 +31,18 @@ const EMPTY_FORM = {
   difficulty: 'Beginner',
   summary: '',
   video: '',
+  instructions: '',
+  mistakes: '',
+  tips: '',
   left: 150,
   top: 360,
   prerequisites: [],
   existingIcon: '',
 };
+
+// textarea (one item per line) <-> array of trimmed non-empty lines
+const linesToArray = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean);
+const arrayToLines = (a) => (a || []).join('\n');
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
@@ -134,6 +141,9 @@ export default function AdminPage() {
       difficulty: ex.difficulty || 'Beginner',
       summary: ex.summary || '',
       video: ex.videoId || '',
+      instructions: arrayToLines(ex.instructions),
+      mistakes: arrayToLines(ex.mistakes),
+      tips: arrayToLines(ex.tips),
       left: ex.position?.left ?? 150,
       top: ex.position?.top ?? 360,
       prerequisites: ex.prerequisites || [],
@@ -184,6 +194,9 @@ export default function AdminPage() {
         summary: form.summary.trim(),
         icon: iconUrl || '',
         videoId: parseYouTubeId(form.video),
+        instructions: linesToArray(form.instructions),
+        mistakes: linesToArray(form.mistakes),
+        tips: linesToArray(form.tips),
         position: { left: Number(form.left) || 0, top: Number(form.top) || 0 },
         prerequisites: form.prerequisites,
       };
@@ -312,6 +325,21 @@ export default function AdminPage() {
           <div className="mt-4">
             <Field label="YouTube video (URL or ID)" htmlFor="video">
               <input id="video" type="text" value={form.video} onChange={(e) => setField('video', e.target.value)} className="w-full px-3 py-2 rounded-lg" style={inputStyle} placeholder="https://youtube.com/watch?v=… or the 11-char ID" />
+            </Field>
+          </div>
+
+          <div className="mt-4">
+            <Field label="How to perform — one step per line" htmlFor="instructions">
+              <textarea id="instructions" value={form.instructions} onChange={(e) => setField('instructions', e.target.value)} rows={5} className="w-full px-3 py-2 rounded-lg" style={inputStyle} placeholder={"Step 1...\nStep 2...\nStep 3..."} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <Field label="Common mistakes — one per line" htmlFor="mistakes">
+              <textarea id="mistakes" value={form.mistakes} onChange={(e) => setField('mistakes', e.target.value)} rows={4} className="w-full px-3 py-2 rounded-lg" style={inputStyle} placeholder={"Mistake one...\nMistake two..."} />
+            </Field>
+            <Field label="Pro tips — one per line" htmlFor="tips">
+              <textarea id="tips" value={form.tips} onChange={(e) => setField('tips', e.target.value)} rows={4} className="w-full px-3 py-2 rounded-lg" style={inputStyle} placeholder={"Tip one...\nTip two..."} />
             </Field>
           </div>
 
