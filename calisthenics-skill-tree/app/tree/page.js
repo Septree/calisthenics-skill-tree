@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { theme } from '../theme';
 import { useExercises, getEffectiveCompleted } from '../useExercises';
 import ExerciseIcon from '../ExerciseIcon';
+import CheckMark from '../CheckMark';
 import { useAuth } from '../AuthContext';
 import { getUserProgress } from '../db-helpers';
 import { getQuoteOfTheDay } from '../quotes-data';
@@ -160,14 +161,13 @@ export default function TreePage() {
 
                     {isDone && (
                       <div
-                        className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold animate-pop"
+                        className="absolute top-0 right-0 w-6 h-6 rounded-full flex items-center justify-center animate-pop"
                         style={{
                           backgroundColor: theme.accent.success,
-                          color: 'white',
                           boxShadow: `0 0 0 2px ${theme.background.primary}`,
                         }}
                       >
-                        ✓
+                        <CheckMark size={16} ring="#ffffff" check="#ffffff" draw={false} strokeWidth={5} />
                       </div>
                     )}
                   </div>

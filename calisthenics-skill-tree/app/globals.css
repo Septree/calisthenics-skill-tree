@@ -61,14 +61,41 @@ h1, h2, h3, h4 {
   animation: celebrate 0.7s ease-in-out both;
 }
 
-/* Radiating rays of the completion burst. */
-@keyframes burst-ray {
-  0% { transform-origin: center top; opacity: 0; }
-  20% { opacity: 1; }
-  100% { opacity: 0; }
+/* Completion check celebration: ring scales in, check draws, ripple + glow. */
+@keyframes ring-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
-.animate-burst-ray {
-  animation: burst-ray 1s ease-out forwards;
+.cc-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ring-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes check-draw {
+  to { stroke-dashoffset: 0; }
+}
+.cc-check {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: check-draw 0.45s ease-out 0.25s forwards;
+}
+
+@keyframes ripple {
+  0% { transform: scale(0.6); opacity: 0.55; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+.cc-ripple {
+  animation: ripple 0.9s ease-out 0.2s forwards;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.8; }
+}
+.cc-glow {
+  animation: glow-pulse 1.2s ease-in-out both;
 }
 
 /* Scroll-reveal for the landing page. */

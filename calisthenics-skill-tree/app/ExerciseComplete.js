@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 import { useExercises, getEffectiveCompleted } from './useExercises';
 import { getUserProgress, markExerciseComplete, markExerciseIncomplete } from './db-helpers';
 import { theme } from './theme';
+import CheckMark from './CheckMark';
 
 // Client island: the user-specific "mark complete" control + celebration.
 export default function ExerciseComplete({ exerciseId }) {
@@ -38,7 +39,7 @@ export default function ExerciseComplete({ exerciseId }) {
       if (ok) {
         setCompleted((c) => [...c, exerciseId]);
         setJustCompleted(true);
-        setTimeout(() => setJustCompleted(false), 1400);
+        setTimeout(() => setJustCompleted(false), 1600);
       }
     }
     setMarking(false);
@@ -48,23 +49,32 @@ export default function ExerciseComplete({ exerciseId }) {
     <>
       {justCompleted && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none" aria-hidden="true">
-          <div className="relative">
-            {[...Array(8)].map((_, i) => (
-              <span
-                key={i}
-                className="absolute left-1/2 top-1/2 w-2 h-16 rounded-full animate-burst-ray"
-                style={{
-                  backgroundColor: theme.accent.success,
-                  transform: `rotate(${i * 45}deg) translateY(-40px)`,
-                  transformOrigin: 'center top',
-                }}
-              />
-            ))}
+          <div className="relative flex items-center justify-center" style={{ width: 160, height: 160 }}>
+            {/* soft teal glow */}
             <div
-              className="relative w-28 h-28 rounded-full flex items-center justify-center text-5xl font-bold animate-celebrate"
-              style={{ backgroundColor: theme.accent.success, color: 'white' }}
+              className="cc-glow absolute inset-0 rounded-full"
+              style={{ background: `radial-gradient(circle, ${theme.accent.primary}55 0%, transparent 70%)` }}
+            />
+            {/* expanding ripple rings */}
+            <span
+              className="cc-ripple absolute rounded-full"
+              style={{ width: 112, height: 112, border: `2px solid ${theme.accent.primary}` }}
+            />
+            <span
+              className="cc-ripple absolute rounded-full"
+              style={{ width: 112, height: 112, border: `2px solid ${theme.accent.success}`, animationDelay: '0.35s' }}
+            />
+            {/* elevated disc with the drawing check */}
+            <div
+              className="relative rounded-full flex items-center justify-center"
+              style={{
+                width: 112,
+                height: 112,
+                backgroundColor: theme.background.secondary,
+                boxShadow: `0 0 30px ${theme.accent.primary}66`,
+              }}
             >
-              ✓
+              <CheckMark size={84} ring={theme.accent.primary} check={theme.accent.success} draw />
             </div>
           </div>
         </div>
@@ -78,7 +88,7 @@ export default function ExerciseComplete({ exerciseId }) {
         style={{
           backgroundColor: isCompleted ? theme.accent.success : theme.accent.primary,
           color: 'white',
-          boxShadow: justCompleted ? `0 0 24px ${theme.accent.success}` : 'none',
+          boxShadow: justCompleted ? `0 0 24px ${theme.accent.primary}` : 'none',
         }}
       >
         {marking
