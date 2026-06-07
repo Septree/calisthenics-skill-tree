@@ -37,7 +37,7 @@ export default function ProfilePage() {
   // load user progress
   useEffect(() => {
     if (user) {
-      getUserProgress(user.uid).then((progress) => {
+      getUserProgress(user.id).then((progress) => {
         setCompletedExercises(progress);
         setIsLoading(false);
       });

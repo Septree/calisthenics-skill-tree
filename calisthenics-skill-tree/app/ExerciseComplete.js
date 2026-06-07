@@ -16,7 +16,7 @@ export default function ExerciseComplete({ exerciseId }) {
   const [justCompleted, setJustCompleted] = useState(false);
 
   useEffect(() => {
-    if (user) getUserProgress(user.uid).then(setCompleted);
+    if (user) getUserProgress(user.id).then(setCompleted);
     else setCompleted([]);
   }, [user]);
 
@@ -32,10 +32,10 @@ export default function ExerciseComplete({ exerciseId }) {
     }
     setMarking(true);
     if (isActual) {
-      const ok = await markExerciseIncomplete(user.uid, exerciseId);
+      const ok = await markExerciseIncomplete(user.id, exerciseId);
       if (ok) setCompleted((c) => c.filter((i) => i !== exerciseId));
     } else {
-      const ok = await markExerciseComplete(user.uid, exerciseId);
+      const ok = await markExerciseComplete(user.id, exerciseId);
       if (ok) {
         setCompleted((c) => [...c, exerciseId]);
         setJustCompleted(true);
