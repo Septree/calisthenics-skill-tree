@@ -78,6 +78,13 @@ create policy "completions_select_own" on public.completions for select using (a
 create policy "completions_insert_own" on public.completions for insert with check (auth.uid() = user_id);
 create policy "completions_delete_own" on public.completions for delete using (auth.uid() = user_id);
 
+-- ---------- table privileges (RLS filters rows; these allow the roles in) ----------
+grant usage on schema public to anon, authenticated;
+grant select on public.exercises to anon, authenticated;
+grant insert, update, delete on public.exercises to authenticated;   -- RLS still limits writes to admin
+grant select, insert, update, delete on public.completions to authenticated;
+grant select, insert, update, delete on public.profiles to authenticated;
+
 -- ---------- storage: public bucket for exercise images ----------
 insert into storage.buckets (id, name, public)
 values ('exercise-images', 'exercise-images', true)
