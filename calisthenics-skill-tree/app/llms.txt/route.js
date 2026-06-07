@@ -1,12 +1,16 @@
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION } from '../site';
-import { exercises as builtInExercises } from '../exercises-data';
+import { supabaseStatic } from '../supabase/static';
 
 // Serves /llms.txt — a concise, machine-readable description of the site for
-// LLMs/AI assistants (see https://llmstxt.org). Static, built from code only.
-export const dynamic = 'force-static';
+// LLMs/AI assistants (see https://llmstxt.org). Lists skills from the DB.
+export const revalidate = 3600;
 
-export function GET() {
-  const skillLines = builtInExercises
+export async function GET() {
+  const { data } = await supabaseStatic
+    .from('exercises')
+    .select('id,name,category,difficulty,summary')
+    .order('id');
+  const skillLines = (data || [])
     .map((ex) => `- [${ex.name}](${SITE_URL}/exercises/${ex.id}): ${ex.difficulty} ${ex.category} skill — ${ex.summary || 'calisthenics movement.'}`)
     .join('\n');
 

@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
-import { setUserName } from '../db-helpers';
+import { supabase } from '../supabase/client';
 import { theme } from '../theme';
 import GoogleSignInButton from '../GoogleSignInButton';
 
@@ -15,33 +13,39 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
+    setNotice('');
     setLoading(true);
 
-    try {
-      // create user account
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      // save the chosen display name
-      if (name.trim()) {
-        await setUserName(cred.user.uid, name.trim());
-      }
-      // redirect to home page on success
+    // The DB trigger creates the profile row using this name.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name: name.trim() } },
+    });
+
+    if (error) {
+      const m = (error.message || '').toLowerCase();
+      if (m.includes('already') || m.includes('registered')) setError('An account with this email already exists.');
+      else if (m.includes('valid') && m.includes('email')) setError('Please enter a valid email address.');
+      else if (m.includes('password')) setError('Password should be at least 6 characters.');
+      else setError('Something went wrong. Please try again.');
+      setLoading(false);
+      return;
+    }
+
+    if (data.session) {
+      // signed in immediately (email confirmation disabled)
       router.push('/tree');
-    } catch (error) {
-      // Map known codes to friendly copy; never surface raw Firebase messages.
-      if (error.code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists.');
-      } else if (error.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
-      } else if (error.code === 'auth/weak-password') {
-        setError('Password should be at least 6 characters.');
-      } else {
-        setError('Something went wrong. Please try again.');
-      }
+      router.refresh();
+    } else {
+      // email confirmation is on — no session yet
+      setNotice('Account created! Check your email to confirm, then log in.');
       setLoading(false);
     }
   };
@@ -160,9 +164,23 @@ export default function SignupPage() {
             />
           </div>
 
+          {/* Success / confirm-email notice */}
+          {notice && (
+            <div
+              className="mb-4 p-3 rounded-lg text-sm"
+              style={{
+                backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                color: theme.accent.success,
+                border: '1px solid rgba(34, 197, 94, 0.3)'
+              }}
+            >
+              {notice}
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
-            <div 
+            <div
               className="mb-4 p-3 rounded-lg text-sm"
               style={{
                 backgroundColor: 'rgba(239, 68, 68, 0.1)',

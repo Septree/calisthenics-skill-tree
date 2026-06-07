@@ -2,70 +2,67 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from './firebase';
+import { supabase } from './supabase/client';
 import { getUserName, setUserName } from './db-helpers';
 
-// create context
 const AuthContext = createContext({});
 
-// hook to use auth context
 export const useAuth = () => useContext(AuthContext);
+
 export function AuthProvider({ children }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [profileName, setProfileName] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Track the auth session. Keep this callback synchronous (no awaited Supabase
+  // calls inside) to avoid the onAuthStateChange deadlock; fetch the name below.
   useEffect(() => {
-    // listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        // prefer the user's chosen name; fall back to the email handle
-        const name = await getUserName(u.uid);
-        setProfileName(name || u.email.split('@')[0]);
-      } else {
-        setProfileName('');
-      }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setLoading(false);
     });
-
-    return unsubscribe;
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
-  // sign in with Google; seed the display name from the Google profile on first sign-in
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    try {
-      const existing = await getUserName(result.user.uid);
-      if (!existing && result.user.displayName) {
-        await setUserName(result.user.uid, result.user.displayName);
-        setProfileName(result.user.displayName);
-      }
-    } catch {
-      // non-fatal — name can still be set later in the profile
+  // Resolve the display name whenever the user changes.
+  useEffect(() => {
+    let active = true;
+    if (user) {
+      getUserName(user.id).then((name) => {
+        if (active) setProfileName(name || user.user_metadata?.name || user.email.split('@')[0]);
+      });
+    } else {
+      setProfileName('');
     }
-    return result;
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  const loginWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/tree` },
+    });
+    if (error) throw error;
+    // browser redirects to Google; the callback route finishes sign-in
   };
 
-  // update the user's chosen display name
   const saveName = async (name) => {
     if (!user) return;
     const trimmed = name.trim();
-    await setUserName(user.uid, trimmed);
+    await setUserName(user.id, trimmed);
     setProfileName(trimmed || user.email.split('@')[0]);
   };
 
-  // logout function
   const logout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await supabase.auth.signOut();
+    router.push('/login');
   };
 
   return (

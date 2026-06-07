@@ -1,29 +1,22 @@
-import { exercises as builtInExercises } from './exercises-data';
+import { supabaseStatic } from './supabase/static';
+import { rowToExercise } from './exercise-map';
 
-// Server-side data for an exercise page. Built-ins come straight from code (so
-// those pages prerender with no network). Custom skills are read from Firestore
-// at request time (dynamic). Returns the exercise plus the full list so the page
-// can render prerequisite / "unlocks" links.
+// Server-side data for an exercise page. Reads from Supabase (public-read), so
+// pages can prerender for SEO. Returns the exercise + the full list (for
+// prerequisite / "unlocks" links).
 export async function getExercisePageData(id) {
   const numId = parseInt(id);
-  const builtin = builtInExercises.find((e) => e.id === numId);
-  if (builtin) {
-    return { exercise: builtin, all: builtInExercises };
+  const { data, error } = await supabaseStatic.from('exercises').select('*');
+  if (error || !data) {
+    return { exercise: null, all: [] };
   }
-
-  try {
-    const { db } = await import('./firebase');
-    const { getDocs, collection } = await import('firebase/firestore');
-    const snap = await getDocs(collection(db, 'exercises'));
-    const custom = snap.docs.map((d) => ({ _docId: d.id, ...d.data() }));
-    const all = [...builtInExercises, ...custom];
-    return { exercise: all.find((e) => e.id === numId) || null, all };
-  } catch {
-    return { exercise: null, all: builtInExercises };
-  }
+  const all = data.map(rowToExercise);
+  return { exercise: all.find((e) => e.id === numId) || null, all };
 }
 
-// Static params for built-in exercises (prerendered for SEO/speed).
-export function builtInExerciseParams() {
-  return builtInExercises.map((e) => ({ id: String(e.id) }));
+// Static params for every exercise (prerendered for SEO/speed).
+export async function exerciseStaticParams() {
+  const { data, error } = await supabaseStatic.from('exercises').select('id');
+  if (error || !data) return [];
+  return data.map((r) => ({ id: String(r.id) }));
 }

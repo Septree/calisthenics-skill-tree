@@ -4,14 +4,14 @@ import { theme } from '../../theme';
 import ExerciseIcon from '../../ExerciseIcon';
 import ExerciseVideo from '../../ExerciseVideo';
 import ExerciseComplete from '../../ExerciseComplete';
-import { getExercisePageData, builtInExerciseParams } from '../../exercises-server';
+import { getExercisePageData, exerciseStaticParams } from '../../exercises-server';
 import { SITE_URL } from '../../site';
 
-// Built-in pages prerender; revalidate hourly so admin edits show up.
+// Pages prerender from the DB; revalidate hourly so admin edits show up.
 export const revalidate = 3600;
 
-export function generateStaticParams() {
-  return builtInExerciseParams();
+export async function generateStaticParams() {
+  return exerciseStaticParams();
 }
 
 export async function generateMetadata({ params }) {

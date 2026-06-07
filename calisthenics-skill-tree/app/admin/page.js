@@ -4,27 +4,22 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { theme } from '../theme';
 import { useAuth } from '../AuthContext';
-import { exercises as builtInExercises } from '../exercises-data';
-import { getNextExerciseId, invalidateExercisesCache } from '../useExercises';
+import { invalidateExercisesCache } from '../useExercises';
 import ExerciseIcon from '../ExerciseIcon';
 import {
   getCustomExercises,
   addCustomExercise,
   updateCustomExercise,
   deleteCustomExercise,
-  getExerciseOverrides,
-  setExercisePosition,
-  getVideoOverrides,
-  setExerciseVideo,
+  uploadExerciseImage,
 } from '../db-helpers';
-import { fileToCompressedDataUrl } from '../image-utils';
+import { fileToCompressedBlob } from '../image-utils';
 import { parseYouTubeId } from '../youtube-utils';
 
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 const DIFFICULTIES = ['Beginner', 'Intermediate', 'Advanced'];
 
 const EMPTY_FORM = {
-  editingDocId: null,
   editingId: null,
   name: '',
   category: '',
@@ -48,73 +43,26 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const isAdmin = !!user && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
-  const [custom, setCustom] = useState([]);
+  const [exercises, setExercises] = useState([]);
   const [listLoading, setListLoading] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
-  // Compressed base64 data URL of a freshly chosen image (stored in Firestore).
+  const [imageBlob, setImageBlob] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [imageProcessing, setImageProcessing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  // Overrides for built-in skills + per-row drafts/saving.
-  const [overrides, setOverrides] = useState({});
-  const [videoOverrides, setVideoOverrides] = useState({});
-  const [posDraft, setPosDraft] = useState({});
-  const [videoDraft, setVideoDraft] = useState({});
-  const [savingPosId, setSavingPosId] = useState(null);
-
-  const allExercises = [...builtInExercises, ...custom];
 
   const reload = () => {
     setListLoading(true);
     getCustomExercises()
-      .then(setCustom)
+      .then(setExercises)
       .finally(() => setListLoading(false));
-    getExerciseOverrides().then(setOverrides);
-    getVideoOverrides().then(setVideoOverrides);
   };
 
   useEffect(() => {
     if (isAdmin) reload();
   }, [isAdmin]);
-
-  // current left/top for a built-in: draft > saved override > code default
-  const posValue = (ex, axis) => {
-    const draft = posDraft[ex.id];
-    if (draft && draft[axis] !== undefined && draft[axis] !== '') return draft[axis];
-    if (overrides[ex.id]?.[axis] !== undefined) return overrides[ex.id][axis];
-    return ex.position?.[axis] ?? 0;
-  };
-
-  const setPosDraftField = (id, axis, value) =>
-    setPosDraft((d) => ({ ...d, [id]: { ...d[id], [axis]: value } }));
-
-  // current video input for a built-in: draft > saved override
-  const videoValue = (ex) => {
-    if (videoDraft[ex.id] !== undefined) return videoDraft[ex.id];
-    return videoOverrides[ex.id] ?? '';
-  };
-
-  const handleSaveBuiltin = async (ex) => {
-    setError('');
-    setSavingPosId(ex.id);
-    try {
-      const position = { left: Number(posValue(ex, 'left')) || 0, top: Number(posValue(ex, 'top')) || 0 };
-      const videoId = parseYouTubeId(videoValue(ex));
-      await setExercisePosition(ex.id, position);
-      await setExerciseVideo(ex.id, videoId);
-      setOverrides((o) => ({ ...o, [ex.id]: position }));
-      setVideoOverrides((v) => ({ ...v, [ex.id]: videoId }));
-      invalidateExercisesCache();
-      setNotice(`Saved "${ex.name}".`);
-    } catch (err) {
-      console.error(err);
-      setError('Could not save. Check your admin permissions.');
-    } finally {
-      setSavingPosId(null);
-    }
-  };
 
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -128,13 +76,13 @@ export default function AdminPage() {
 
   const resetForm = () => {
     setForm(EMPTY_FORM);
+    setImageBlob(null);
     setImagePreview('');
     setError('');
   };
 
   const startEdit = (ex) => {
     setForm({
-      editingDocId: ex._docId,
       editingId: ex.id,
       name: ex.name || '',
       category: ex.category || '',
@@ -149,6 +97,7 @@ export default function AdminPage() {
       prerequisites: ex.prerequisites || [],
       existingIcon: ex.icon || '',
     });
+    setImageBlob(null);
     setImagePreview('');
     setError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -160,9 +109,9 @@ export default function AdminPage() {
     setError('');
     setImageProcessing(true);
     try {
-      // Shrink in-browser and keep as a base64 data URL (no Firebase Storage).
-      const dataUrl = await fileToCompressedDataUrl(file);
-      setImagePreview(dataUrl);
+      const blob = await fileToCompressedBlob(file);
+      setImageBlob(blob);
+      setImagePreview(URL.createObjectURL(blob));
     } catch (err) {
       console.error(err);
       setError(err.message || 'Could not process that image.');
@@ -183,11 +132,13 @@ export default function AdminPage() {
 
     setSubmitting(true);
     try {
-      // New compressed image wins; otherwise keep the existing one (on edit).
-      const iconUrl = imagePreview || form.existingIcon;
+      // Upload a freshly chosen image to Storage; otherwise keep the existing URL.
+      let iconUrl = form.existingIcon;
+      if (imageBlob) {
+        iconUrl = await uploadExerciseImage(imageBlob);
+      }
 
       const data = {
-        id: form.editingId ?? getNextExerciseId(allExercises),
         name: form.name.trim(),
         category: form.category.trim().toLowerCase() || 'other',
         difficulty: form.difficulty,
@@ -201,19 +152,19 @@ export default function AdminPage() {
         prerequisites: form.prerequisites,
       };
 
-      if (form.editingDocId) {
-        await updateCustomExercise(form.editingDocId, data);
+      if (form.editingId) {
+        await updateCustomExercise(form.editingId, data);
         setNotice(`Updated "${data.name}".`);
       } else {
-        await addCustomExercise(data);
-        setNotice(`Added "${data.name}". Its page is live at /exercises/${data.id}.`);
+        const newId = await addCustomExercise(data);
+        setNotice(`Added "${data.name}". Its page is live at /exercises/${newId}.`);
       }
       invalidateExercisesCache();
       resetForm();
       reload();
     } catch (err) {
       console.error(err);
-      setError('Save failed. Check your connection / permissions and try again.');
+      setError('Save failed. Check your connection / admin permissions and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -222,7 +173,7 @@ export default function AdminPage() {
   const handleDelete = async (ex) => {
     if (!confirm(`Delete "${ex.name}"? This removes its page too.`)) return;
     try {
-      await deleteCustomExercise(ex._docId);
+      await deleteCustomExercise(ex.id);
       invalidateExercisesCache();
       setNotice(`Deleted "${ex.name}".`);
       reload();
@@ -281,7 +232,7 @@ export default function AdminPage() {
           </Link>
         </div>
         <p className="mb-8" style={{ color: theme.text.tertiary }}>
-          Signed in as {user.email}. Built-in skills are read-only; the ones you add here are fully editable.
+          Signed in as {user.email}. Every skill on the site is managed here.
         </p>
 
         {notice && (
@@ -297,7 +248,7 @@ export default function AdminPage() {
           style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}` }}
         >
           <h2 className="text-2xl font-bold mb-5" style={{ color: theme.text.primary }}>
-            {form.editingDocId ? 'Edit skill' : 'Add a new skill'}
+            {form.editingId ? 'Edit skill' : 'Add a new skill'}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -366,7 +317,7 @@ export default function AdminPage() {
           <div className="mb-4">
             <p className="block mb-2 text-sm font-medium" style={{ color: theme.text.secondary }}>Prerequisites</p>
             <div className="flex flex-wrap gap-2">
-              {allExercises.filter((ex) => ex.id !== form.editingId).map((ex) => {
+              {exercises.filter((ex) => ex.id !== form.editingId).map((ex) => {
                 const on = form.prerequisites.includes(ex.id);
                 return (
                   <button
@@ -384,6 +335,9 @@ export default function AdminPage() {
                   </button>
                 );
               })}
+              {exercises.length === 0 && (
+                <span className="text-xs" style={{ color: theme.text.tertiary }}>Add a skill first to use it as a prerequisite.</span>
+              )}
             </div>
           </div>
 
@@ -395,9 +349,9 @@ export default function AdminPage() {
 
           <div className="flex gap-3">
             <button type="submit" disabled={submitting || imageProcessing} className="px-6 py-3 rounded-lg font-semibold transition hover:opacity-90 cursor-pointer disabled:opacity-50" style={{ backgroundColor: theme.accent.primary, color: 'white' }}>
-              {submitting ? 'Saving...' : form.editingDocId ? 'Save changes' : 'Add skill'}
+              {submitting ? 'Saving...' : form.editingId ? 'Save changes' : 'Add skill'}
             </button>
-            {form.editingDocId && (
+            {form.editingId && (
               <button type="button" onClick={resetForm} className="px-6 py-3 rounded-lg font-semibold transition hover:opacity-80 cursor-pointer" style={{ backgroundColor: theme.background.tertiary, color: theme.text.primary, border: `1px solid ${theme.border.default}` }}>
                 Cancel
               </button>
@@ -405,16 +359,16 @@ export default function AdminPage() {
           </div>
         </form>
 
-        {/* CUSTOM LIST */}
-        <h2 className="text-2xl font-bold mb-4" style={{ color: theme.text.primary }}>Your added skills</h2>
+        {/* SKILL LIST */}
+        <h2 className="text-2xl font-bold mb-4" style={{ color: theme.text.primary }}>All skills</h2>
         {listLoading ? (
           <p style={{ color: theme.text.tertiary }}>Loading...</p>
-        ) : custom.length === 0 ? (
+        ) : exercises.length === 0 ? (
           <p style={{ color: theme.text.tertiary }}>None yet — add your first skill above.</p>
         ) : (
           <div className="space-y-3">
-            {custom.map((ex) => (
-              <div key={ex._docId} className="flex items-center gap-4 p-4 rounded-lg" style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}` }}>
+            {exercises.map((ex) => (
+              <div key={ex.id} className="flex items-center gap-4 p-4 rounded-lg" style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}` }}>
                 <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ backgroundColor: theme.background.tertiary }}>
                   <ExerciseIcon src={ex.icon} name={ex.name} className="w-full h-full object-contain" />
                 </div>
@@ -428,41 +382,6 @@ export default function AdminPage() {
             ))}
           </div>
         )}
-
-        {/* BUILT-IN SKILLS — reposition + set the video for any original skill */}
-        <h2 className="text-2xl font-bold mt-10 mb-2" style={{ color: theme.text.primary }}>Built-in skills</h2>
-        <p className="text-sm mb-4" style={{ color: theme.text.tertiary }}>
-          These skills are defined in code, but you can move them on the tree and set their YouTube video.
-        </p>
-        <div className="space-y-3">
-          {builtInExercises.map((ex) => (
-            <div key={ex.id} className="flex items-center gap-3 p-4 rounded-lg flex-wrap" style={{ backgroundColor: theme.background.secondary, border: `1px solid ${theme.border.default}` }}>
-              <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0" style={{ backgroundColor: theme.background.tertiary }}>
-                <ExerciseIcon src={ex.icon} name={ex.name} className="w-full h-full object-contain" />
-              </div>
-              <p className="font-semibold w-full sm:w-auto sm:flex-1 min-w-[120px]" style={{ color: theme.text.primary }}>{ex.name}</p>
-              <label className="text-xs flex items-center gap-1" style={{ color: theme.text.tertiary }}>
-                left
-                <input type="number" value={posValue(ex, 'left')} onChange={(e) => setPosDraftField(ex.id, 'left', e.target.value)} className="w-20 px-2 py-1 rounded" style={{ backgroundColor: theme.background.tertiary, border: `1px solid ${theme.border.default}`, color: theme.text.primary }} />
-              </label>
-              <label className="text-xs flex items-center gap-1" style={{ color: theme.text.tertiary }}>
-                top
-                <input type="number" value={posValue(ex, 'top')} onChange={(e) => setPosDraftField(ex.id, 'top', e.target.value)} className="w-20 px-2 py-1 rounded" style={{ backgroundColor: theme.background.tertiary, border: `1px solid ${theme.border.default}`, color: theme.text.primary }} />
-              </label>
-              <input
-                type="text"
-                value={videoValue(ex)}
-                onChange={(e) => setVideoDraft((d) => ({ ...d, [ex.id]: e.target.value }))}
-                placeholder="YouTube URL or ID"
-                className="flex-1 min-w-[160px] px-2 py-1 rounded text-sm"
-                style={{ backgroundColor: theme.background.tertiary, border: `1px solid ${theme.border.default}`, color: theme.text.primary }}
-              />
-              <button onClick={() => handleSaveBuiltin(ex)} disabled={savingPosId === ex.id} className="text-sm px-4 py-1.5 rounded cursor-pointer hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: theme.accent.primary, color: 'white' }}>
-                {savingPosId === ex.id ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

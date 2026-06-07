@@ -1,157 +1,94 @@
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, getDocs, collection, arrayUnion } from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './supabase/client';
+import { rowToExercise, exerciseToRow } from './exercise-map';
 
-// get user's completed exercises
+// ---- progress (completions table) ----
 export async function getUserProgress(userId) {
-  try {
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    
-    if (userDoc.exists()) {
-      return userDoc.data().completedExercises || [];
-    }
-    
-    // if user document doesn't exist, create it
-    await setDoc(doc(db, 'users', userId), {
-      completedExercises: []
-    });
-    
-    return [];
-  } catch (error) {
+  const { data, error } = await supabase.from('completions').select('exercise_id').eq('user_id', userId);
+  if (error) {
     console.error('Error getting user progress:', error);
     return [];
   }
+  return data.map((r) => r.exercise_id);
 }
 
-// this will mark exercise as complete
 export async function markExerciseComplete(userId, exerciseId) {
-  try {
-    const userRef = doc(db, 'users', userId);
-    
-    // add exercise ID to completedExercises array (won't duplicate)
-    await updateDoc(userRef, {
-      completedExercises: arrayUnion(exerciseId)
-    });
-    
-    return true;
-  } catch (error) {
-    // if document doesn't exist, create it
-    if (error.code === 'not-found') {
-      await setDoc(userRef, {
-        completedExercises: [exerciseId]
-      });
-      return true;
-    }
-    
+  const { error } = await supabase.from('completions').insert({ user_id: userId, exercise_id: exerciseId });
+  if (error && error.code !== '23505') {
+    // 23505 = already completed (unique violation) → treat as success
     console.error('Error marking exercise complete:', error);
     return false;
   }
+  return true;
 }
-// mark exercise as incomplete (remove from array)
+
 export async function markExerciseIncomplete(userId, exerciseId) {
-  try {
-    const userRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userRef);
-    
-    if (userDoc.exists()) {
-      const currentCompleted = userDoc.data().completedExercises || [];
-      const updatedCompleted = currentCompleted.filter(id => id !== exerciseId);
-      
-      await updateDoc(userRef, {
-        completedExercises: updatedCompleted
-      });
-      
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
+  const { error } = await supabase
+    .from('completions')
+    .delete()
+    .eq('user_id', userId)
+    .eq('exercise_id', exerciseId);
+  if (error) {
     console.error('Error marking exercise incomplete:', error);
     return false;
   }
+  return true;
 }
-// check if exercise is completed
+
 export function isExerciseCompleted(completedExercises, exerciseId) {
   return completedExercises.includes(exerciseId);
 }
 
-// ----- Display name (stored on the user's own doc) -----
+// ---- display name (profiles table) ----
 export async function getUserName(userId) {
-  try {
-    const snap = await getDoc(doc(db, 'users', userId));
-    return snap.exists() ? (snap.data().name || '') : '';
-  } catch (error) {
+  const { data, error } = await supabase.from('profiles').select('name').eq('id', userId).maybeSingle();
+  if (error) {
     console.error('Error getting user name:', error);
     return '';
   }
+  return data?.name || '';
 }
 
 export async function setUserName(userId, name) {
-  await setDoc(doc(db, 'users', userId), { name }, { merge: true });
+  const { error } = await supabase.from('profiles').upsert({ id: userId, name });
+  if (error) console.error('Error setting user name:', error);
 }
 
-// ----- Custom exercises (admin-managed, stored in Firestore) -----
-// These are merged on top of the built-in exercises in exercises-data.js.
-
-// fetch all admin-created exercises
+// ---- exercises (all skills live in the DB now) ----
 export async function getCustomExercises() {
-  try {
-    const snap = await getDocs(collection(db, 'exercises'));
-    // _docId keeps the Firestore document id for later update/delete
-    return snap.docs.map((d) => ({ _docId: d.id, ...d.data() }));
-  } catch (error) {
-    console.error('Error getting custom exercises:', error);
+  const { data, error } = await supabase.from('exercises').select('*').order('id');
+  if (error) {
+    console.error('Error getting exercises:', error);
     return [];
   }
+  return data.map(rowToExercise);
 }
 
-// create a new exercise (admin only — also enforced by Firestore rules)
 export async function addCustomExercise(data) {
-  const docRef = await addDoc(collection(db, 'exercises'), data);
-  return docRef.id;
+  const { data: row, error } = await supabase
+    .from('exercises')
+    .insert(exerciseToRow(data))
+    .select('id')
+    .single();
+  if (error) throw error;
+  return row.id;
 }
 
-// update an existing custom exercise by its Firestore document id
-export async function updateCustomExercise(docId, data) {
-  await updateDoc(doc(db, 'exercises', docId), data);
+export async function updateCustomExercise(id, data) {
+  const { error } = await supabase.from('exercises').update(exerciseToRow(data)).eq('id', id);
+  if (error) throw error;
 }
 
-// delete a custom exercise by its Firestore document id
-export async function deleteCustomExercise(docId) {
-  await deleteDoc(doc(db, 'exercises', docId));
+export async function deleteCustomExercise(id) {
+  const { error } = await supabase.from('exercises').delete().eq('id', id);
+  if (error) throw error;
 }
 
-// ----- Position overrides -----
-// Lets the admin reposition ANY skill (including built-ins defined in code).
-// Stored as a single map document: meta/positions = { "<id>": {left, top}, ... }
-
-export async function getExerciseOverrides() {
-  try {
-    const snap = await getDoc(doc(db, 'meta', 'positions'));
-    return snap.exists() ? snap.data() : {};
-  } catch (error) {
-    console.error('Error getting position overrides:', error);
-    return {};
-  }
-}
-
-export async function setExercisePosition(id, position) {
-  // merge so we only touch this one id's entry
-  await setDoc(doc(db, 'meta', 'positions'), { [String(id)]: position }, { merge: true });
-}
-
-// ----- Video overrides -----
-// YouTube video id per skill (incl. built-ins). meta/videos = { "<id>": "<videoId>" }
-
-export async function getVideoOverrides() {
-  try {
-    const snap = await getDoc(doc(db, 'meta', 'videos'));
-    return snap.exists() ? snap.data() : {};
-  } catch (error) {
-    console.error('Error getting video overrides:', error);
-    return {};
-  }
-}
-
-export async function setExerciseVideo(id, videoId) {
-  await setDoc(doc(db, 'meta', 'videos'), { [String(id)]: videoId }, { merge: true });
+// ---- image upload (Supabase Storage; takes a compressed Blob) ----
+export async function uploadExerciseImage(blob) {
+  const type = blob.type || 'image/png';
+  const ext = (type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from('exercise-images').upload(path, blob, { contentType: type });
+  if (error) throw error;
+  return supabase.storage.from('exercise-images').getPublicUrl(path).data.publicUrl;
 }

@@ -1,7 +1,9 @@
 import { SITE_URL } from './site';
-import { exercises as builtInExercises } from './exercises-data';
+import { supabaseStatic } from './supabase/static';
 
-export default function sitemap() {
+export const revalidate = 3600;
+
+export default async function sitemap() {
   const now = new Date();
 
   const staticRoutes = [
@@ -17,9 +19,9 @@ export default function sitemap() {
     priority: r.priority,
   }));
 
-  // Built-in exercise pages (the primary SEO targets).
-  const exerciseRoutes = builtInExercises.map((ex) => ({
-    url: `${SITE_URL}/exercises/${ex.id}`,
+  const { data } = await supabaseStatic.from('exercises').select('id');
+  const exerciseRoutes = (data || []).map((r) => ({
+    url: `${SITE_URL}/exercises/${r.id}`,
     lastModified: now,
     changeFrequency: 'monthly',
     priority: 0.8,

@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { supabase } from '../supabase/client';
 import { theme } from '../theme';
 import GoogleSignInButton from '../GoogleSignInButton';
 
@@ -20,28 +19,20 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    try {
-      // sign in user
-      await signInWithEmailAndPassword(auth, email, password);
-      // redirect into the app on success
-      router.push('/tree');
-    } catch (error) {
-      // Generic message for all credential errors so we don't reveal whether an
-      // email is registered (prevents user enumeration). Keep rate-limit hint useful.
-      if (error.code === 'auth/too-many-requests') {
-        setError('Too many attempts. Please wait a moment and try again.');
-      } else if (
-        error.code === 'auth/invalid-credential' ||
-        error.code === 'auth/user-not-found' ||
-        error.code === 'auth/wrong-password' ||
-        error.code === 'auth/invalid-email'
-      ) {
-        setError('Invalid email or password');
-      } else {
-        setError('Something went wrong. Please try again.');
-      }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      // Generic message so we don't reveal whether an email is registered.
+      setError(
+        error.message?.toLowerCase().includes('rate')
+          ? 'Too many attempts. Please wait a moment and try again.'
+          : 'Invalid email or password',
+      );
       setLoading(false);
+      return;
     }
+    // redirect into the app on success
+    router.push('/tree');
+    router.refresh();
   };
 
   return (
