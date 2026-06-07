@@ -73,7 +73,9 @@ export default function ProfilePage() {
     };
   });
 
-  const overallProgress = (userData.completedExercises / userData.totalExercises) * 100;
+  const overallProgress = userData.totalExercises > 0
+    ? (userData.completedExercises / userData.totalExercises) * 100
+    : 0;
 
   // Wait for Firebase auth to resolve before deciding what to show.
   // This prevents the brief "Please Sign In" flash on reload for logged-in users.

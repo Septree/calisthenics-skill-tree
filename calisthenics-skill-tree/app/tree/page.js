@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { theme } from '../theme';
 import { useExercises, getEffectiveCompleted } from '../useExercises';
@@ -13,11 +13,13 @@ import { getQuoteOfTheDay } from '../quotes-data';
 const NODE = 80;        // node diameter
 const RADIUS = NODE / 2;
 const PAD = 80;         // breathing room around the whole graph
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
 export default function TreePage() {
   const [hoveredExercise, setHoveredExercise] = useState(null);
-  const { exercises } = useExercises();
+  const { exercises, loading } = useExercises();
   const { user } = useAuth();
+  const isAdmin = !!user && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const [completedExercises, setCompletedExercises] = useState([]);
   const [, setIsLoadingProgress] = useState(true);
   const quote = getQuoteOfTheDay();
@@ -35,6 +37,50 @@ export default function TreePage() {
       setIsLoadingProgress(false);
     }
   }, [user]);
+
+  // Progressive reveal: each node fades/pops in as it scrolls into view.
+  const nodeRefs = useRef(new Map());
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('node-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -8% 0px' },
+    );
+    nodeRefs.current.forEach((el) => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, [exercises]);
+
+  // loading / empty states
+  if (loading && exercises.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: theme.background.primary }}>
+        <p style={{ color: theme.text.tertiary }}>Loading skill tree…</p>
+      </div>
+    );
+  }
+  if (exercises.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: theme.background.primary }}>
+        <div className="text-center max-w-md reveal-up">
+          <h1 className="text-3xl font-bold mb-3" style={{ color: theme.text.primary }}>The skill tree is being built</h1>
+          <p className="mb-6" style={{ color: theme.text.tertiary }}>
+            No skills have been added yet — check back soon!
+          </p>
+          {isAdmin && (
+            <Link href="/admin" className="inline-block px-6 py-3 rounded-lg font-semibold transition hover:opacity-90" style={{ backgroundColor: theme.accent.primary, color: 'white' }}>
+              Add your first skill
+            </Link>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // --- Auto-fit the canvas to every node's position (any direction, incl. negatives) ---
   const lefts = exercises.map((e) => e.position?.left ?? 0);
@@ -111,6 +157,8 @@ export default function TreePage() {
                 return (
                   <line
                     key={`${exercise.id}-${prereqId}`}
+                    className="line-draw"
+                    pathLength="1"
                     x1={prereqCenterX + Math.cos(angle) * RADIUS}
                     y1={prereqCenterY + Math.sin(angle) * RADIUS}
                     x2={exerciseCenterX - Math.cos(angle) * RADIUS}
@@ -128,7 +176,15 @@ export default function TreePage() {
             const pos = posOf(exercise);
             const isDone = effectiveCompleted.includes(exercise.id);
             return (
-              <div key={exercise.id} className="absolute" style={{ top: `${pos.top}px`, left: `${pos.left}px` }}>
+              <div
+                key={exercise.id}
+                ref={(el) => {
+                  if (el) nodeRefs.current.set(exercise.id, el);
+                  else nodeRefs.current.delete(exercise.id);
+                }}
+                className="absolute node-reveal"
+                style={{ top: `${pos.top}px`, left: `${pos.left}px` }}
+              >
                 <Link
                   href={`/exercises/${exercise.id}`}
                   aria-label={`${exercise.name}, ${exercise.difficulty}${isDone ? ', completed' : ''}`}
@@ -138,6 +194,7 @@ export default function TreePage() {
                     height: '80px',
                     border: `2px solid ${theme.node.border}`,
                     opacity: isDone ? 1 : 0.5,
+                    boxShadow: isDone ? `0 0 16px ${theme.accent.success}88` : 'none',
                     textDecoration: 'none',
                   }}
                   onMouseEnter={(e) => {
@@ -172,6 +229,14 @@ export default function TreePage() {
                     )}
                   </div>
                 </Link>
+
+                {/* Name label under the node — shown on touch where hover doesn't work */}
+                <div
+                  className="md:hidden absolute left-1/2 -translate-x-1/2 text-center text-xs leading-tight pointer-events-none"
+                  style={{ top: '84px', width: '96px', color: theme.text.tertiary }}
+                >
+                  {exercise.name}
+                </div>
 
                 {/* HOVER BOX */}
                 {hoveredExercise?.id === exercise.id && (

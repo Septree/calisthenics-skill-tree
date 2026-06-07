@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { theme } from './theme'
 import { useAuth } from './AuthContext'
 
@@ -18,19 +19,45 @@ export default function Navigation() {
   const { user, profileName, logout } = useAuth();
   const isAdmin = !!user && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   const close = () => setOpen(false);
   const linkBase = 'rounded-sm px-1 transition-opacity hover:opacity-80 focus-visible:opacity-100';
+  const isActive = (href) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
   const links = (
     <>
-      {NAV_LINKS.map((l) => (
-        <Link key={l.href} href={l.href} onClick={close} className={linkBase} style={{ color: theme.text.secondary }}>
-          {l.label}
-        </Link>
-      ))}
+      {NAV_LINKS.map((l) => {
+        const active = isActive(l.href);
+        return (
+          <Link
+            key={l.href}
+            href={l.href}
+            onClick={close}
+            aria-current={active ? 'page' : undefined}
+            className={linkBase}
+            style={{
+              color: active ? theme.accent.primary : theme.text.secondary,
+              fontWeight: active ? 600 : 400,
+              borderBottom: active ? `2px solid ${theme.accent.primary}` : '2px solid transparent',
+            }}
+          >
+            {l.label}
+          </Link>
+        );
+      })}
       {isAdmin && (
-        <Link href="/admin" onClick={close} className={linkBase} style={{ color: theme.accent.primary }}>
+        <Link
+          href="/admin"
+          onClick={close}
+          aria-current={isActive('/admin') ? 'page' : undefined}
+          className={linkBase}
+          style={{
+            color: theme.accent.primary,
+            fontWeight: isActive('/admin') ? 700 : 500,
+            borderBottom: isActive('/admin') ? `2px solid ${theme.accent.primary}` : '2px solid transparent',
+          }}
+        >
           Admin
         </Link>
       )}

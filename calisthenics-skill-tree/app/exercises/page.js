@@ -5,6 +5,7 @@ import { theme } from '../theme';
 import { useExercises } from '../useExercises';
 import ExerciseIcon from '../ExerciseIcon';
 import Skeleton from '../Skeleton';
+import { difficultyStyle } from '../difficulty';
 
 export default function ExercisesPage() {
   const { exercises, loading } = useExercises();
@@ -76,16 +77,17 @@ export default function ExercisesPage() {
 
               {/* DIFFICULTY BADGE */}
               <div className="flex justify-center mb-3">
-                <span 
-                  className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{
-                    backgroundColor: theme.hoverBox.badge.background,
-                    color: theme.hoverBox.badge.text,
-                    border: `1px solid ${theme.hoverBox.badge.border}`
-                  }}
-                >
-                  {exercise.difficulty}
-                </span>
+                {(() => {
+                  const ds = difficultyStyle(exercise.difficulty);
+                  return (
+                    <span
+                      className="px-3 py-1 rounded-full text-xs font-semibold"
+                      style={{ backgroundColor: ds.bg, color: ds.color, border: `1px solid ${ds.border}` }}
+                    >
+                      {exercise.difficulty}
+                    </span>
+                  );
+                })()}
               </div>
 
               {/* CATEGORY TAG */}
@@ -120,6 +122,14 @@ export default function ExercisesPage() {
           ))}
 
         </div>
+
+        {/* EMPTY STATE */}
+        {!loading && exercises.length === 0 && (
+          <div className="text-center py-16 reveal-up">
+            <p className="text-lg mb-2" style={{ color: theme.text.primary }}>No exercises yet</p>
+            <p style={{ color: theme.text.tertiary }}>Skills will show up here as they’re added.</p>
+          </div>
+        )}
 
         {/* BACK BUTTON */}
         <div className="mt-8">

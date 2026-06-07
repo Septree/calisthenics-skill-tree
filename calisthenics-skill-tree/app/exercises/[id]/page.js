@@ -5,6 +5,7 @@ import ExerciseIcon from '../../ExerciseIcon';
 import ExerciseVideo from '../../ExerciseVideo';
 import ExerciseComplete from '../../ExerciseComplete';
 import { getExercisePageData, exerciseStaticParams } from '../../exercises-server';
+import { difficultyStyle } from '../../difficulty';
 import { SITE_URL } from '../../site';
 
 // Pages prerender from the DB; revalidate hourly so admin edits show up.
@@ -118,7 +119,10 @@ export default async function ExerciseDetailPage({ params }) {
               <div className="flex-1">
                 <h1 className="text-3xl font-bold mb-3" style={{ color: theme.text.primary }}>{exercise.name}</h1>
                 <div className="flex gap-3 flex-wrap">
-                  {badge(exercise.difficulty)}
+                  {(() => {
+                    const ds = difficultyStyle(exercise.difficulty);
+                    return badge(exercise.difficulty, { bg: ds.bg, color: ds.color, border: ds.border });
+                  })()}
                   {badge(exercise.category, {
                     bg: theme.background.tertiary,
                     color: theme.text.secondary,
