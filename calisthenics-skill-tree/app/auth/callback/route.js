@@ -6,7 +6,10 @@ import { createClient } from '../../supabase/server';
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') || '/tree';
+  // Only allow same-origin relative paths. Reject protocol-relative ("//evil")
+  // and backslash ("/\evil") forms so ?next can't become an open redirect.
+  const rawNext = searchParams.get('next') || '/tree';
+  const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : '/tree';
 
   if (code) {
     const supabase = await createClient();

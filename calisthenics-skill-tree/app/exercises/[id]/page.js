@@ -76,6 +76,9 @@ export default async function ExerciseDetailPage({ params }) {
     });
   }
   const jsonLd = { '@context': 'https://schema.org', '@graph': graph };
+  // Escape '<' so an admin-entered value containing "</script>" can't break out
+  // of the inline JSON-LD <script> tag on this public, statically-rendered page.
+  const jsonLdSafe = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 
   const badge = (text, opts = {}) => (
     <span
@@ -93,7 +96,7 @@ export default async function ExerciseDetailPage({ params }) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.background.primary }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdSafe }} />
 
       <div className="max-w-6xl mx-auto px-6 py-12">
         {/* Breadcrumb */}
