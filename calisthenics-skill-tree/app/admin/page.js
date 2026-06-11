@@ -33,6 +33,7 @@ const EMPTY_FORM = {
   top: 360,
   prerequisites: [],
   existingIcon: '',
+  isGoal: false,
 };
 
 // textarea (one item per line) <-> array of trimmed non-empty lines
@@ -96,6 +97,7 @@ export default function AdminPage() {
       top: ex.position?.top ?? 360,
       prerequisites: ex.prerequisites || [],
       existingIcon: ex.icon || '',
+      isGoal: ex.isGoal || false,
     });
     setImageBlob(null);
     setImagePreview('');
@@ -150,6 +152,7 @@ export default function AdminPage() {
         tips: linesToArray(form.tips),
         position: { left: Number(form.left) || 0, top: Number(form.top) || 0 },
         prerequisites: form.prerequisites,
+        isGoal: form.isGoal,
       };
 
       if (form.editingId) {
@@ -303,6 +306,20 @@ export default function AdminPage() {
             </Field>
           </div>
 
+          {/* Goal flag — marks this skill as a selectable goal/milestone */}
+          <label className="flex items-center gap-3 mb-4 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.isGoal}
+              onChange={(e) => setField('isGoal', e.target.checked)}
+              className="w-4 h-4 cursor-pointer"
+              style={{ accentColor: theme.accent.primary }}
+            />
+            <span className="text-sm" style={{ color: theme.text.secondary }}>
+              Selectable as a <strong>goal</strong> (milestone like Muscle-Up, Handstand) — shows in the goal picker
+            </span>
+          </label>
+
           {/* image preview */}
           {(imagePreview || form.existingIcon) && (
             <div className="mb-4 flex items-center gap-3">
@@ -373,7 +390,10 @@ export default function AdminPage() {
                   <ExerciseIcon src={ex.icon} name={ex.name} className="w-full h-full object-contain" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate" style={{ color: theme.text.primary }}>{ex.name}</p>
+                  <p className="font-semibold truncate" style={{ color: theme.text.primary }}>
+                    {ex.name}
+                    {ex.isGoal && <span className="ml-2" style={{ color: theme.accent.primary }} title="Goal skill">★ goal</span>}
+                  </p>
                   <p className="text-xs" style={{ color: theme.text.tertiary }}>{ex.difficulty} · {ex.category} · /exercises/{ex.id}</p>
                 </div>
                 <button onClick={() => startEdit(ex)} className="text-sm px-3 py-1 rounded cursor-pointer hover:opacity-80" style={{ color: theme.accent.primary }}>Edit</button>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { theme } from './theme'
 import { useAuth } from './AuthContext'
+import { useExercises } from './useExercises'
 
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
@@ -16,10 +17,25 @@ const NAV_LINKS = [
 ];
 
 export default function Navigation() {
-  const { user, profileName, logout } = useAuth();
+  const { user, profileName, goalId, logout } = useAuth();
+  const { exercises } = useExercises();
   const isAdmin = !!user && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+
+  const goalSkill = goalId != null ? exercises.find((e) => e.id === goalId) : null;
+  const goalChip = goalSkill && (
+    <Link
+      href="/tree"
+      onClick={() => setOpen(false)}
+      title={`Your goal: ${goalSkill.name}`}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold max-w-[160px] transition-opacity hover:opacity-90"
+      style={{ backgroundColor: `${theme.accent.primary}1a`, color: theme.accent.primary, border: `1px solid ${theme.accent.primary}55` }}
+    >
+      <span aria-hidden="true">🎯</span>
+      <span className="truncate">{goalSkill.name}</span>
+    </Link>
+  );
 
   const close = () => setOpen(false);
   const linkBase = 'rounded-sm px-1 transition-opacity hover:opacity-80 focus-visible:opacity-100';
@@ -102,6 +118,7 @@ export default function Navigation() {
           {/* Desktop links */}
           <div className="hidden md:flex gap-6 text-sm items-center">
             {links}
+            {goalChip}
             {authActions}
           </div>
 
@@ -139,6 +156,7 @@ export default function Navigation() {
           style={{ borderTop: `1px solid ${theme.border.dark}` }}
         >
           {links}
+          {goalChip && <div className="pt-1">{goalChip}</div>}
           <div className="flex flex-col gap-3 pt-2" style={{ borderTop: `1px solid ${theme.border.dark}` }}>
             {authActions}
           </div>

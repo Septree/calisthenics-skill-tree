@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Skeleton from '../Skeleton';
+import GoalPanel from '../GoalPanel';
 import { theme } from '../theme';
 import { useExercises, getCategoriesFrom, getEffectiveCompleted } from '../useExercises';
 import { useAuth } from '../AuthContext';
@@ -211,6 +212,11 @@ export default function ProfilePage() {
               {userData.completedExercises} / {userData.totalExercises} exercises completed
             </p>
           </div>
+        </div>
+
+        {/* GOAL HUB */}
+        <div className="mb-8">
+          <GoalPanel completedIds={completedExercises} />
         </div>
 
         {/* STATS CARD */}

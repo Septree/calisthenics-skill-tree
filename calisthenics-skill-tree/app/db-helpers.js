@@ -53,6 +53,30 @@ export async function setUserName(userId, name) {
   if (error) console.error('Error setting user name:', error);
 }
 
+// ---- active goal (profiles.goal_exercise_id) ----
+export async function getProfileGoal(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('goal_exercise_id')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) {
+    console.error('Error getting goal:', error);
+    return null;
+  }
+  return data?.goal_exercise_id ?? null;
+}
+
+// Pass null to clear the goal. The profile row already exists (signup trigger),
+// so this is always an update.
+export async function setProfileGoal(userId, exerciseId) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ goal_exercise_id: exerciseId })
+    .eq('id', userId);
+  if (error) console.error('Error setting goal:', error);
+}
+
 // ---- exercises (all skills live in the DB now) ----
 export async function getCustomExercises() {
   const { data, error } = await supabase.from('exercises').select('*').order('id');

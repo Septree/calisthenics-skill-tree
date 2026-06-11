@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from './supabase/client';
-import { getUserName, setUserName } from './db-helpers';
+import { getUserName, setUserName, getProfileGoal, setProfileGoal } from './db-helpers';
 
 const AuthContext = createContext({});
 
@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [profileName, setProfileName] = useState('');
+  const [goalId, setGoalId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Track the auth session. Keep this callback synchronous (no awaited Supabase
@@ -29,20 +30,31 @@ export function AuthProvider({ children }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Resolve the display name whenever the user changes.
+  // Resolve the display name + active goal whenever the user changes.
   useEffect(() => {
     let active = true;
     if (user) {
       getUserName(user.id).then((name) => {
         if (active) setProfileName(name || user.user_metadata?.name || user.email.split('@')[0]);
       });
+      getProfileGoal(user.id).then((id) => {
+        if (active) setGoalId(id);
+      });
     } else {
       setProfileName('');
+      setGoalId(null);
     }
     return () => {
       active = false;
     };
   }, [user]);
+
+  // Set (or clear, with null) the user's active goal.
+  const setGoal = async (exerciseId) => {
+    if (!user) return;
+    setGoalId(exerciseId); // optimistic
+    await setProfileGoal(user.id, exerciseId);
+  };
 
   const loginWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -66,7 +78,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profileName, loading, logout, saveName, loginWithGoogle }}>
+    <AuthContext.Provider value={{ user, profileName, goalId, setGoal, loading, logout, saveName, loginWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );

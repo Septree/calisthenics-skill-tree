@@ -3,9 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { theme } from '../theme';
-import { useExercises, getEffectiveCompleted } from '../useExercises';
+import { useExercises } from '../useExercises';
+import { indexById, effectiveCompletedSet, goalPathSet, skillState } from '../progression';
 import ExerciseIcon from '../ExerciseIcon';
 import CheckMark from '../CheckMark';
+import GoalPanel from '../GoalPanel';
 import { useAuth } from '../AuthContext';
 import { getUserProgress } from '../db-helpers';
 import { getQuoteOfTheDay } from '../quotes-data';
@@ -18,13 +20,17 @@ const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 export default function TreePage() {
   const [hoveredExercise, setHoveredExercise] = useState(null);
   const { exercises, loading } = useExercises();
-  const { user } = useAuth();
+  const { user, goalId } = useAuth();
   const isAdmin = !!user && !!ADMIN_EMAIL && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const [completedExercises, setCompletedExercises] = useState([]);
   const [, setIsLoadingProgress] = useState(true);
   const quote = getQuoteOfTheDay();
-  // completing a skill implies its prerequisites are complete too
-  const effectiveCompleted = getEffectiveCompleted(completedExercises, exercises);
+
+  // Derive unlock states once: effective completion, the active goal's path, and
+  // a per-skill state (locked / available / in_progress / completed).
+  const byId = indexById(exercises);
+  const doneSet = effectiveCompletedSet(completedExercises, byId);
+  const goalPath = goalPathSet(goalId, byId);
 
   // load user progress
   useEffect(() => {
@@ -111,6 +117,11 @@ export default function TreePage() {
           Master your body, one move at a time
         </p>
 
+        {/* GOAL HUB — pick a goal, see progress + what to train next */}
+        <div className="px-4 mb-6">
+          <GoalPanel completedIds={completedExercises} />
+        </div>
+
         {/* QUOTE OF THE DAY */}
         <div
           className="max-w-2xl mx-auto p-6 rounded-lg mb-6"
@@ -174,7 +185,24 @@ export default function TreePage() {
           {/* NODES */}
           {exercises.map((exercise) => {
             const pos = posOf(exercise);
-            const isDone = effectiveCompleted.includes(exercise.id);
+            const state = skillState(exercise.id, doneSet, byId, goalPath);
+            const isDone = state === 'completed';
+            const isLocked = state === 'locked';
+            const isNext = state === 'in_progress';
+            // Border + glow per state. When a goal is active, dim skills that
+            // aren't on its path so the journey stands out.
+            const borderColor = isDone
+              ? theme.accent.success
+              : isNext
+              ? theme.accent.primary
+              : theme.node.border;
+            const glow = isDone
+              ? `0 0 16px ${theme.accent.success}88`
+              : isNext
+              ? `0 0 18px ${theme.accent.primary}aa`
+              : 'none';
+            const offPath = goalId != null && !goalPath.has(exercise.id) && !isDone;
+            const opacity = isDone || isNext ? 1 : isLocked ? 0.3 : offPath ? 0.45 : 0.8;
             return (
               <div
                 key={exercise.id}
@@ -187,22 +215,23 @@ export default function TreePage() {
               >
                 <Link
                   href={`/exercises/${exercise.id}`}
-                  aria-label={`${exercise.name}, ${exercise.difficulty}${isDone ? ', completed' : ''}`}
-                  className="rounded-full transition-transform duration-200 hover:scale-110 cursor-pointer bg-transparent relative flex items-center justify-center"
+                  aria-label={`${exercise.name}, ${exercise.difficulty}, ${state.replace('_', ' ')}`}
+                  className={`rounded-full transition-transform duration-200 hover:scale-110 cursor-pointer bg-transparent relative flex items-center justify-center ${isNext ? 'cc-node-pulse' : ''}`}
                   style={{
                     width: '80px',
                     height: '80px',
-                    border: `2px solid ${theme.node.border}`,
-                    opacity: isDone ? 1 : 0.5,
-                    boxShadow: isDone ? `0 0 16px ${theme.accent.success}88` : 'none',
+                    border: `2px solid ${borderColor}`,
+                    opacity,
+                    boxShadow: glow,
                     textDecoration: 'none',
+                    '--ring': `${theme.accent.primary}88`,
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.border = `2px solid ${theme.node.borderHover}`;
                     setHoveredExercise(exercise);
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.border = `2px solid ${theme.node.border}`;
+                    e.currentTarget.style.border = `2px solid ${borderColor}`;
                     setHoveredExercise(null);
                   }}
                   onFocus={() => setHoveredExercise(exercise)}
@@ -225,6 +254,16 @@ export default function TreePage() {
                         }}
                       >
                         <CheckMark size={16} ring="#ffffff" check="#ffffff" draw={false} strokeWidth={5} />
+                      </div>
+                    )}
+
+                    {isLocked && (
+                      <div
+                        className="absolute top-0 right-0 w-5 h-5 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: theme.background.tertiary, boxShadow: `0 0 0 2px ${theme.background.primary}`, fontSize: '10px' }}
+                        aria-hidden="true"
+                      >
+                        🔒
                       </div>
                     )}
                   </div>

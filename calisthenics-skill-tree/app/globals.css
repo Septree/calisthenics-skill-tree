@@ -149,6 +149,20 @@ h1, h2, h3, h4 {
   100% { background-position: -100% 0; }
 }
 
+/* Goal "train next" pulsing dot + in-progress node ring. */
+@keyframes cc-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.45; }
+}
+.cc-pulse-dot { animation: cc-pulse 1.4s ease-in-out infinite; }
+
+@keyframes cc-ring-pulse {
+  0% { box-shadow: 0 0 0 0 var(--ring, rgba(9,192,183,0.55)); }
+  70% { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.cc-node-pulse { animation: cc-ring-pulse 1.8s ease-out infinite; }
+
 /* Respect users who prefer reduced motion. */
 @media (prefers-reduced-motion: reduce) {
   *,
