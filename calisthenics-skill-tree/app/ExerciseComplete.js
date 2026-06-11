@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useExercises, getEffectiveCompleted } from './useExercises';
-import { getUserProgress, markExerciseComplete, markExerciseIncomplete } from './db-helpers';
+import { useUserProgress, setProgressLocal } from './useProgress';
+import { markExerciseComplete, markExerciseIncomplete } from './db-helpers';
 import { theme } from './theme';
 import CheckMark from './CheckMark';
 
@@ -11,14 +12,9 @@ import CheckMark from './CheckMark';
 export default function ExerciseComplete({ exerciseId }) {
   const { user } = useAuth();
   const { exercises } = useExercises();
-  const [completed, setCompleted] = useState([]);
+  const { ids: completed } = useUserProgress(user?.id);
   const [marking, setMarking] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
-
-  useEffect(() => {
-    if (user) getUserProgress(user.id).then(setCompleted);
-    else setCompleted([]);
-  }, [user]);
 
   const isActual = completed.includes(exerciseId);
   const effective = getEffectiveCompleted(completed, exercises);
@@ -33,11 +29,11 @@ export default function ExerciseComplete({ exerciseId }) {
     setMarking(true);
     if (isActual) {
       const ok = await markExerciseIncomplete(user.id, exerciseId);
-      if (ok) setCompleted((c) => c.filter((i) => i !== exerciseId));
+      if (ok) setProgressLocal(completed.filter((i) => i !== exerciseId));
     } else {
       const ok = await markExerciseComplete(user.id, exerciseId);
       if (ok) {
-        setCompleted((c) => [...c, exerciseId]);
+        setProgressLocal([...completed, exerciseId]);
         setJustCompleted(true);
         setTimeout(() => setJustCompleted(false), 1600);
       }

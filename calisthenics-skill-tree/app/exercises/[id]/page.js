@@ -4,6 +4,7 @@ import { theme } from '../../theme';
 import ExerciseIcon from '../../ExerciseIcon';
 import ExerciseVideo from '../../ExerciseVideo';
 import ExerciseComplete from '../../ExerciseComplete';
+import ExerciseGuidance from '../../ExerciseGuidance';
 import { getExercisePageData, exerciseStaticParams } from '../../exercises-server';
 import { difficultyStyle } from '../../difficulty';
 import { SITE_URL } from '../../site';
@@ -151,6 +152,11 @@ export default async function ExerciseDetailPage({ params }) {
               <ExerciseVideo exerciseId={exercise.id} name={exercise.name} />
             </div>
           </div>
+        </div>
+
+        {/* PERSONALIZED GUIDANCE — your path / next step / what's blocking it */}
+        <div className="mb-8">
+          <ExerciseGuidance exerciseId={exercise.id} />
         </div>
 
         {/* WHERE IT FITS — unique, data-driven content */}
