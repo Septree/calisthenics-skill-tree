@@ -74,5 +74,47 @@ export function goalProgress(goalId, doneSet, byId) {
   if (path.size === 0) return { completed: 0, total: 0, pct: 0 };
   let completed = 0;
   for (const id of path) if (doneSet.has(id)) completed += 1;
-  return { completed, total: path.size, pct: Math.round((completed / path.size) * 100) };
+  return { completed, total: path.size, pct: pct(completed, path.size) };
+}
+
+// ---- progression metrics (Phase 3) ----
+const pct = (completed, total) => (total > 0 ? Math.round((completed / total) * 100) : 0);
+
+// Overall completion across every skill.
+export function overallProgress(exercises, doneSet) {
+  let completed = 0;
+  for (const e of exercises) if (doneSet.has(e.id)) completed += 1;
+  return { completed, total: exercises.length, pct: pct(completed, exercises.length) };
+}
+
+// Generic "group by a field, count completed" → ordered [{ key, completed, total, pct }].
+// `order` lists keys to surface first; any extras follow in first-seen order.
+function groupProgress(exercises, doneSet, keyOf, order = []) {
+  const groups = new Map();
+  for (const e of exercises) {
+    const k = keyOf(e);
+    const g = groups.get(k) || { completed: 0, total: 0 };
+    g.total += 1;
+    if (doneSet.has(e.id)) g.completed += 1;
+    groups.set(k, g);
+  }
+  const out = [];
+  for (const k of order) {
+    if (groups.has(k)) {
+      const g = groups.get(k);
+      out.push({ key: k, ...g, pct: pct(g.completed, g.total) });
+      groups.delete(k);
+    }
+  }
+  for (const [k, g] of groups) out.push({ key: k, ...g, pct: pct(g.completed, g.total) });
+  return out;
+}
+
+export function categoryProgress(exercises, doneSet) {
+  return groupProgress(exercises, doneSet, (e) => e.category || 'other');
+}
+
+export const TIER_ORDER = ['Beginner', 'Intermediate', 'Advanced'];
+export function tierProgress(exercises, doneSet) {
+  return groupProgress(exercises, doneSet, (e) => e.difficulty || 'Beginner', TIER_ORDER);
 }

@@ -5,7 +5,15 @@ import Link from 'next/link';
 import Skeleton from '../Skeleton';
 import GoalPanel from '../GoalPanel';
 import { theme } from '../theme';
-import { useExercises, getCategoriesFrom, getEffectiveCompleted } from '../useExercises';
+import { useExercises } from '../useExercises';
+import {
+  indexById,
+  effectiveCompletedSet,
+  overallProgress,
+  categoryProgress,
+  tierProgress,
+} from '../progression';
+import { difficultyStyle } from '../difficulty';
 import { useAuth } from '../AuthContext';
 import { getUserProgress } from '../db-helpers';
 
@@ -47,36 +55,23 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  // completing a skill also counts its prerequisites as complete
-  const effectiveCompleted = getEffectiveCompleted(completedExercises, exercises);
+  // All metrics derive from the effective completed set (counts transitive
+  // prerequisites as complete too). Computed by the shared progression engine.
+  const byId = indexById(exercises);
+  const doneSet = effectiveCompletedSet(completedExercises, byId);
+  const overall = overallProgress(exercises, doneSet);
+  const cats = categoryProgress(exercises, doneSet);
+  const tiers = tierProgress(exercises, doneSet);
 
-  // calculate real data
   const displayName = profileName || (user ? user.email.split('@')[0] : 'Guest');
   const userData = {
     name: displayName,
     initials: displayName.substring(0, 2).toUpperCase(),
-    totalExercises: exercises.length,
-    completedExercises: effectiveCompleted.length,
+    totalExercises: overall.total,
+    completedExercises: overall.completed,
   };
 
-  // calculate category progress with REAL data
-  const categories = getCategoriesFrom(exercises);
-  const categoryProgress = categories.map(cat => {
-    const categoryExercises = exercises.filter(ex => ex.category === cat);
-    const completedInCategory = categoryExercises.filter(ex =>
-      effectiveCompleted.includes(ex.id)
-    ).length;
-
-    return {
-      name: cat.charAt(0).toUpperCase() + cat.slice(1),
-      completed: completedInCategory,  // real count!
-      total: categoryExercises.length
-    };
-  });
-
-  const overallProgress = userData.totalExercises > 0
-    ? (userData.completedExercises / userData.totalExercises) * 100
-    : 0;
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
   // Wait for Firebase auth to resolve before deciding what to show.
   // This prevents the brief "Please Sign In" flash on reload for logged-in users.
@@ -272,11 +267,11 @@ export default function ProfilePage() {
             <div
               className="h-6 rounded-full transition-all duration-700 flex items-center justify-center text-white text-xs font-semibold"
               style={{
-                width: `${barsReady ? overallProgress : 0}%`,
+                width: `${barsReady ? overall.pct : 0}%`,
                 backgroundColor: theme.accent.primary
               }}
             >
-              {overallProgress > 5 && `${overallProgress.toFixed(0)}%`}
+              {overall.pct > 5 && `${overall.pct}%`}
             </div>
           </div>
         </div>
@@ -298,29 +293,59 @@ export default function ProfilePage() {
           </h2>
 
           <div className="space-y-4">
-            {categoryProgress.map((category, index) => {
-              const percentage = (category.completed / category.total) * 100;
+            {cats.map((category) => (
+              <div key={category.key}>
+                <div
+                  className="flex justify-between text-sm mb-2"
+                  style={{ color: theme.text.secondary }}
+                >
+                  <span className="font-medium">{cap(category.key)}</span>
+                  <span>{category.completed} / {category.total}</span>
+                </div>
 
+                <div
+                  className="w-full rounded-full h-3"
+                  style={{ backgroundColor: theme.border.dark }}
+                >
+                  <div
+                    className="h-3 rounded-full transition-all duration-700"
+                    style={{
+                      width: `${barsReady ? category.pct : 0}%`,
+                      backgroundColor: theme.accent.primary
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* DIFFICULTY-TIER PROGRESS */}
+        <div
+          className="rounded-lg p-6 mt-8 reveal-up"
+          style={{
+            animationDelay: '0.28s',
+            backgroundColor: theme.background.secondary,
+            border: `1px solid ${theme.border.default}`,
+          }}
+        >
+          <h2 className="text-xl font-bold mb-6" style={{ color: theme.text.primary }}>
+            Progress by Difficulty
+          </h2>
+
+          <div className="space-y-4">
+            {tiers.map((tier) => {
+              const barColor = difficultyStyle(tier.key).color;
               return (
-                <div key={index}>
-                  <div 
-                    className="flex justify-between text-sm mb-2"
-                    style={{ color: theme.text.secondary }}
-                  >
-                    <span className="font-medium">{category.name}</span>
-                    <span>{category.completed} / {category.total}</span>
+                <div key={tier.key}>
+                  <div className="flex justify-between text-sm mb-2" style={{ color: theme.text.secondary }}>
+                    <span className="font-medium">{tier.key}</span>
+                    <span>{tier.completed} / {tier.total} · {tier.pct}%</span>
                   </div>
-
-                  <div 
-                    className="w-full rounded-full h-3"
-                    style={{ backgroundColor: theme.border.dark }}
-                  >
+                  <div className="w-full rounded-full h-3" style={{ backgroundColor: theme.border.dark }}>
                     <div
                       className="h-3 rounded-full transition-all duration-700"
-                      style={{
-                        width: `${barsReady ? percentage : 0}%`,
-                        backgroundColor: theme.accent.primary
-                      }}
+                      style={{ width: `${barsReady ? tier.pct : 0}%`, backgroundColor: barColor }}
                     />
                   </div>
                 </div>

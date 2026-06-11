@@ -7,6 +7,9 @@ import {
   skillState,
   recommendedNext,
   goalProgress,
+  overallProgress,
+  categoryProgress,
+  tierProgress,
 } from './progression';
 
 // Graph:  A → B → C (the goal),  A → D (off the goal path)
@@ -83,5 +86,44 @@ describe('goalProgress', () => {
   });
   it('is 100% when the goal is complete', () => {
     expect(goalProgress(GOAL, effectiveCompletedSet([3], byId), byId).pct).toBe(100);
+  });
+});
+
+// Metrics fixture: 2 push + 2 pull, spread across difficulty tiers.
+const metricsEx = [
+  { id: 1, prerequisites: [], category: 'push', difficulty: 'Beginner' },
+  { id: 2, prerequisites: [1], category: 'push', difficulty: 'Intermediate' },
+  { id: 3, prerequisites: [], category: 'pull', difficulty: 'Beginner' },
+  { id: 4, prerequisites: [3], category: 'pull', difficulty: 'Advanced' },
+];
+const mById = indexById(metricsEx);
+
+describe('overallProgress', () => {
+  it('is 0/4 with no progress', () => {
+    expect(overallProgress(metricsEx, new Set())).toEqual({ completed: 0, total: 4, pct: 0 });
+  });
+  it('counts transitive completion (id 2 ⇒ id 1 too)', () => {
+    const done = effectiveCompletedSet([2], mById);
+    expect(overallProgress(metricsEx, done)).toEqual({ completed: 2, total: 4, pct: 50 });
+  });
+});
+
+describe('categoryProgress', () => {
+  it('groups completion by category', () => {
+    const done = effectiveCompletedSet([2], mById); // push: 1 & 2 done; pull: none
+    const cats = categoryProgress(metricsEx, done);
+    expect(cats.find((c) => c.key === 'push')).toMatchObject({ completed: 2, total: 2, pct: 100 });
+    expect(cats.find((c) => c.key === 'pull')).toMatchObject({ completed: 0, total: 2, pct: 0 });
+  });
+});
+
+describe('tierProgress', () => {
+  it('groups by difficulty in Beginner→Intermediate→Advanced order', () => {
+    const done = effectiveCompletedSet([2], mById); // Beginner id1 done, Intermediate id2 done
+    const tiers = tierProgress(metricsEx, done);
+    expect(tiers.map((t) => t.key)).toEqual(['Beginner', 'Intermediate', 'Advanced']);
+    expect(tiers[0]).toMatchObject({ key: 'Beginner', completed: 1, total: 2, pct: 50 });
+    expect(tiers[1]).toMatchObject({ key: 'Intermediate', completed: 1, total: 1, pct: 100 });
+    expect(tiers[2]).toMatchObject({ key: 'Advanced', completed: 0, total: 1, pct: 0 });
   });
 });
