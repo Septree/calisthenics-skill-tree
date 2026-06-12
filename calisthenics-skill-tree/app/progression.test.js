@@ -10,6 +10,7 @@ import {
   overallProgress,
   categoryProgress,
   tierProgress,
+  historyEntries,
 } from './progression';
 
 // Graph:  A → B → C (the goal),  A → D (off the goal path)
@@ -125,5 +126,21 @@ describe('tierProgress', () => {
     expect(tiers[0]).toMatchObject({ key: 'Beginner', completed: 1, total: 2, pct: 50 });
     expect(tiers[1]).toMatchObject({ key: 'Intermediate', completed: 1, total: 1, pct: 100 });
     expect(tiers[2]).toMatchObject({ key: 'Advanced', completed: 0, total: 1, pct: 0 });
+  });
+});
+
+describe('historyEntries', () => {
+  it('maps a newest-first log to exercises, preserving order', () => {
+    const log = [
+      { exerciseId: 2, completedAt: '2026-06-12T00:00:00Z' },
+      { exerciseId: 1, completedAt: '2026-06-10T00:00:00Z' },
+    ];
+    const entries = historyEntries(log, mById);
+    expect(entries.map((e) => e.exercise.id)).toEqual([2, 1]);
+    expect(entries[0].completedAt).toBe('2026-06-12T00:00:00Z');
+  });
+  it('drops completions for deleted skills', () => {
+    const log = [{ exerciseId: 999, completedAt: '2026-06-12T00:00:00Z' }];
+    expect(historyEntries(log, mById)).toEqual([]);
   });
 });

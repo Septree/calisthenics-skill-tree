@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Skeleton from '../Skeleton';
 import GoalPanel from '../GoalPanel';
+import ProgressHistory from '../ProgressHistory';
 import { theme } from '../theme';
 import { useExercises } from '../useExercises';
 import {
@@ -15,12 +16,13 @@ import {
 } from '../progression';
 import { difficultyStyle } from '../difficulty';
 import { useAuth } from '../AuthContext';
-import { getUserProgress } from '../db-helpers';
+import { getCompletionLog } from '../db-helpers';
 
 export default function ProfilePage() {
   const { user, loading: authLoading, profileName, saveName } = useAuth();
   const { exercises } = useExercises();
   const [completedExercises, setCompletedExercises] = useState([]);
+  const [completionLog, setCompletionLog] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   // display-name editing
   const [editingName, setEditingName] = useState(false);
@@ -43,11 +45,12 @@ export default function ProfilePage() {
     return () => clearTimeout(t);
   }, []);
 
-  // load user progress
+  // load the completion log once; derive the completed-id list from it.
   useEffect(() => {
     if (user) {
-      getUserProgress(user.id).then((progress) => {
-        setCompletedExercises(progress);
+      getCompletionLog(user.id).then((entries) => {
+        setCompletionLog(entries);
+        setCompletedExercises(entries.map((e) => e.exerciseId));
         setIsLoading(false);
       });
     } else {
@@ -352,6 +355,11 @@ export default function ProfilePage() {
               );
             })}
           </div>
+        </div>
+
+        {/* PROGRESS HISTORY */}
+        <div className="mt-8">
+          <ProgressHistory log={completionLog} />
         </div>
 
         {/* BACK BUTTON */}

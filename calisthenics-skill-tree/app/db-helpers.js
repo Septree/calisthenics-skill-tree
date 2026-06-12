@@ -11,6 +11,20 @@ export async function getUserProgress(userId) {
   return data.map((r) => r.exercise_id);
 }
 
+// Completion log with timestamps, newest first — powers the progress timeline.
+export async function getCompletionLog(userId) {
+  const { data, error } = await supabase
+    .from('completions')
+    .select('exercise_id, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error('Error getting completion log:', error);
+    return [];
+  }
+  return data.map((r) => ({ exerciseId: r.exercise_id, completedAt: r.created_at }));
+}
+
 export async function markExerciseComplete(userId, exerciseId) {
   const { error } = await supabase.from('completions').insert({ user_id: userId, exercise_id: exerciseId });
   if (error && error.code !== '23505') {

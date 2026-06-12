@@ -118,3 +118,12 @@ export const TIER_ORDER = ['Beginner', 'Intermediate', 'Advanced'];
 export function tierProgress(exercises, doneSet) {
   return groupProgress(exercises, doneSet, (e) => e.difficulty || 'Beginner', TIER_ORDER);
 }
+
+// ---- progress history (Phase 6) ----
+// Map a completion log ([{ exerciseId, completedAt }], newest first) to display
+// entries, dropping completions whose skill no longer exists. Order preserved.
+export function historyEntries(log, byId) {
+  return (log || [])
+    .map((c) => ({ exercise: byId.get(c.exerciseId), completedAt: c.completedAt }))
+    .filter((e) => e.exercise);
+}
