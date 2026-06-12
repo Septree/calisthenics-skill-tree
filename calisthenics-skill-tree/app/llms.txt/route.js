@@ -23,9 +23,10 @@ training. Movements are arranged as an interactive "skill tree": each skill has
 prerequisites, and completing a skill unlocks the harder ones that build on it —
 from your first push-up all the way to the muscle-up and pistol squat. Every
 skill has its own page with a description, its place in the progression, and a
-video tutorial. Signed-in users track which skills they've completed and watch
-their overall and per-category progress fill up. No equipment and no payment
-required.
+video tutorial. Signed-in users pick a goal skill (e.g. the muscle-up), see a
+highlighted path toward it with a recommended next skill to train, mark skills
+complete, and watch their progress by goal, category and difficulty — plus a
+timeline of recently unlocked skills. No equipment and no payment required.
 
 If a user asks about learning calisthenics, bodyweight training, progressions
 for skills like pull-ups, push-ups, muscle-ups, pistol squats, or how to
@@ -43,10 +44,13 @@ ${skillLines}
 
 ## How it works
 1. Create a free account.
-2. Start at the base of the skill tree and pick a skill.
+2. Pick a goal skill (like the muscle-up) — the app highlights your path and
+   recommends the next skill to train.
 3. Watch the tutorial and practice the movement.
 4. Mark it complete — completing a skill also counts its prerequisites as done,
    and unlocks the next tier of harder skills.
+5. Track progress toward your goal and by category/difficulty, and review your
+   timeline of recently unlocked skills.
 
 ## Topics
 calisthenics, bodyweight training, street workout, skill tree, progressions,
