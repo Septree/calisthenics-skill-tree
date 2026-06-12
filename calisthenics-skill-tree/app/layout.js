@@ -2,6 +2,7 @@ import './globals.css'
 import { Barlow, Barlow_Condensed } from 'next/font/google'
 import { AuthProvider } from './AuthContext'
 import Navigation from './Navigation'
+import AchievementToast from './AchievementToast'
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION } from './site'
 
 // Athletic type pairing: condensed display for headings, Barlow for body.
@@ -68,6 +69,7 @@ export default function RootLayout({ children }) {
       <body>
         <AuthProvider>
           <Navigation />
+          <AchievementToast />
           {children}
         </AuthProvider>
       </body>

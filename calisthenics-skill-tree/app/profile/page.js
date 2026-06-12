@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Skeleton from '../Skeleton';
 import GoalPanel from '../GoalPanel';
 import ProgressHistory from '../ProgressHistory';
+import AchievementsPanel from '../AchievementsPanel';
 import { theme } from '../theme';
 import { useExercises } from '../useExercises';
 import {
@@ -355,6 +356,11 @@ export default function ProfilePage() {
               );
             })}
           </div>
+        </div>
+
+        {/* ACHIEVEMENTS */}
+        <div className="mt-8">
+          <AchievementsPanel log={completionLog} />
         </div>
 
         {/* PROGRESS HISTORY */}

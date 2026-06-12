@@ -5,6 +5,8 @@ import { useAuth } from './AuthContext';
 import { useExercises, getEffectiveCompleted } from './useExercises';
 import { useUserProgress, setProgressLocal } from './useProgress';
 import { markExerciseComplete, markExerciseIncomplete } from './db-helpers';
+import { earnedIdsFor, buildAchievements } from './achievements';
+import { pushAchievementUnlocks } from './AchievementToast';
 import { theme } from './theme';
 import CheckMark from './CheckMark';
 
@@ -31,11 +33,22 @@ export default function ExerciseComplete({ exerciseId }) {
       const ok = await markExerciseIncomplete(user.id, exerciseId);
       if (ok) setProgressLocal(completed.filter((i) => i !== exerciseId));
     } else {
+      const before = earnedIdsFor(completed, exercises);
       const ok = await markExerciseComplete(user.id, exerciseId);
       if (ok) {
-        setProgressLocal([...completed, exerciseId]);
+        const next = [...completed, exerciseId];
+        setProgressLocal(next);
         setJustCompleted(true);
         setTimeout(() => setJustCompleted(false), 1600);
+        // Fire the achievement celebration for any milestone this just crossed.
+        const after = earnedIdsFor(next, exercises);
+        const newIds = [...after].filter((id) => !before.has(id));
+        if (newIds.length) {
+          const unlocked = buildAchievements(exercises)
+            .filter((a) => newIds.includes(a.id))
+            .map((a) => ({ id: a.id, name: a.name, glyph: a.glyph }));
+          pushAchievementUnlocks(unlocked);
+        }
       }
     }
     setMarking(false);
