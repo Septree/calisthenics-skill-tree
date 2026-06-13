@@ -68,6 +68,9 @@ export function recommendedNext(goalId, doneSet, byId) {
   return next;
 }
 
+// Round a completed/total ratio to a whole-number percentage.
+const pct = (completed, total) => (total > 0 ? Math.round((completed / total) * 100) : 0);
+
 // Progress toward a goal = completed-on-path / total-on-path.
 export function goalProgress(goalId, doneSet, byId) {
   const path = goalPathSet(goalId, byId);
@@ -78,8 +81,6 @@ export function goalProgress(goalId, doneSet, byId) {
 }
 
 // ---- progression metrics (Phase 3) ----
-const pct = (completed, total) => (total > 0 ? Math.round((completed / total) * 100) : 0);
-
 // Overall completion across every skill.
 export function overallProgress(exercises, doneSet) {
   let completed = 0;

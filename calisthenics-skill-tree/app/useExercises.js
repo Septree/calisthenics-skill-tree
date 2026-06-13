@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getCustomExercises } from './db-helpers';
+import { indexById, effectiveCompletedSet } from './progression';
 
 // Session-level cache so the exercises fetch happens once, not on every page.
 let _cache = null;
@@ -48,25 +49,9 @@ export function useExercises() {
   return { exercises, loading };
 }
 
-// Distinct categories present in a given exercise list.
-export function getCategoriesFrom(list) {
-  return [...new Set(list.map((ex) => ex.category).filter(Boolean))];
-}
-
 // Completing a skill implies its (transitive) prerequisites are complete too.
+// Array-returning convenience wrapper over the shared engine (single source of
+// truth for the prerequisite walk lives in progression.js).
 export function getEffectiveCompleted(completedIds, exercises) {
-  const byId = new Map(exercises.map((e) => [e.id, e]));
-  const done = new Set(completedIds);
-  const stack = [...completedIds];
-  while (stack.length) {
-    const ex = byId.get(stack.pop());
-    if (!ex) continue;
-    for (const prereqId of ex.prerequisites || []) {
-      if (!done.has(prereqId)) {
-        done.add(prereqId);
-        stack.push(prereqId);
-      }
-    }
-  }
-  return [...done];
+  return [...effectiveCompletedSet(completedIds, indexById(exercises))];
 }
