@@ -134,7 +134,9 @@ h1, h2, h3, h4 {
 .line-draw {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: line-draw 0.8s ease 0.15s forwards;
+  /* Slower, deliberate draw; per-line animation-delay (set inline) staggers the
+     connections so the tree assembles itself on load. */
+  animation: line-draw 1.1s ease forwards;
 }
 
 /* Skeleton shimmer for loading states. */
@@ -200,6 +202,7 @@ h1, h2, h3, h4 {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important; /* overrides the inline per-line line-draw stagger */
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;

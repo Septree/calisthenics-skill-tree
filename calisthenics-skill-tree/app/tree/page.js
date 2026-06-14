@@ -106,6 +106,33 @@ export default function TreePage() {
     top: (ex.position?.top ?? 0) + offsetY,
   });
 
+  // Connector lines, flattened and ordered base-first (nodes lower on screen
+  // draw first) so on load the tree appears to "form itself" upward from its
+  // roots — each line's draw-in is staggered in this order.
+  const connectorLines = [];
+  for (const exercise of exercises) {
+    const ex = posOf(exercise);
+    for (const prereqId of exercise.prerequisites || []) {
+      const prereq = byId.get(prereqId);
+      if (!prereq) continue;
+      const pr = posOf(prereq);
+      const prereqCenterX = pr.left + RADIUS;
+      const prereqCenterY = pr.top + RADIUS;
+      const exerciseCenterX = ex.left + RADIUS;
+      const exerciseCenterY = ex.top + RADIUS;
+      const angle = Math.atan2(exerciseCenterY - prereqCenterY, exerciseCenterX - prereqCenterX);
+      connectorLines.push({
+        key: `${exercise.id}-${prereqId}`,
+        x1: prereqCenterX + Math.cos(angle) * RADIUS,
+        y1: prereqCenterY + Math.sin(angle) * RADIUS,
+        x2: exerciseCenterX - Math.cos(angle) * RADIUS,
+        y2: exerciseCenterY - Math.sin(angle) * RADIUS,
+        sortY: prereqCenterY,
+      });
+    }
+  }
+  connectorLines.sort((a, b) => b.sortY - a.sortY); // bottom of the tree first
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.background.primary }}>
       {/* INTRO TEXT */}
@@ -149,37 +176,22 @@ export default function TreePage() {
       <div className="w-full overflow-x-auto pb-12">
         <div className="relative mx-auto" style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}>
 
-          {/* SVG LINES */}
+          {/* SVG LINES — staggered, base-first draw-in so the tree forms itself */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            {exercises.map((exercise) => {
-              const ex = posOf(exercise);
-              return (exercise.prerequisites || []).map((prereqId) => {
-                const prereq = exercises.find((e) => e.id === prereqId);
-                if (!prereq) return null;
-                const pr = posOf(prereq);
-
-                const prereqCenterX = pr.left + RADIUS;
-                const prereqCenterY = pr.top + RADIUS;
-                const exerciseCenterX = ex.left + RADIUS;
-                const exerciseCenterY = ex.top + RADIUS;
-
-                const angle = Math.atan2(exerciseCenterY - prereqCenterY, exerciseCenterX - prereqCenterX);
-
-                return (
-                  <line
-                    key={`${exercise.id}-${prereqId}`}
-                    className="line-draw"
-                    pathLength="1"
-                    x1={prereqCenterX + Math.cos(angle) * RADIUS}
-                    y1={prereqCenterY + Math.sin(angle) * RADIUS}
-                    x2={exerciseCenterX - Math.cos(angle) * RADIUS}
-                    y2={exerciseCenterY - Math.sin(angle) * RADIUS}
-                    stroke={theme.node.line}
-                    strokeWidth="2"
-                  />
-                );
-              });
-            })}
+            {connectorLines.map((ln, i) => (
+              <line
+                key={ln.key}
+                className="line-draw"
+                pathLength="1"
+                x1={ln.x1}
+                y1={ln.y1}
+                x2={ln.x2}
+                y2={ln.y2}
+                stroke={theme.node.line}
+                strokeWidth="2"
+                style={{ animationDelay: `${Math.min(i * 55, 1800)}ms` }}
+              />
+            ))}
           </svg>
 
           {/* NODES */}
