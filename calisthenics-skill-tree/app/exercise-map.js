@@ -15,6 +15,7 @@ export function rowToExercise(r) {
     instructions: r.instructions || [],
     mistakes: r.mistakes || [],
     tips: r.tips || [],
+    muscles: r.muscles || [],
     isGoal: r.is_goal ?? false,
   };
 }
@@ -33,6 +34,7 @@ export function exerciseToRow(d) {
     instructions: d.instructions || [],
     mistakes: d.mistakes || [],
     tips: d.tips || [],
+    muscles: d.muscles || [],
     is_goal: !!d.isGoal,
   };
 }

@@ -29,6 +29,7 @@ const EMPTY_FORM = {
   instructions: '',
   mistakes: '',
   tips: '',
+  muscles: '',
   left: 150,
   top: 360,
   prerequisites: [],
@@ -39,6 +40,10 @@ const EMPTY_FORM = {
 // textarea (one item per line) <-> array of trimmed non-empty lines
 const linesToArray = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean);
 const arrayToLines = (a) => (a || []).join('\n');
+
+// muscles: a comma- or newline-separated input <-> array of trimmed tags
+const toMuscles = (s) => s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
+const musclesToText = (a) => (a || []).join(', ');
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
@@ -93,6 +98,7 @@ export default function AdminPage() {
       instructions: arrayToLines(ex.instructions),
       mistakes: arrayToLines(ex.mistakes),
       tips: arrayToLines(ex.tips),
+      muscles: musclesToText(ex.muscles),
       left: ex.position?.left ?? 150,
       top: ex.position?.top ?? 360,
       prerequisites: ex.prerequisites || [],
@@ -150,6 +156,7 @@ export default function AdminPage() {
         instructions: linesToArray(form.instructions),
         mistakes: linesToArray(form.mistakes),
         tips: linesToArray(form.tips),
+        muscles: toMuscles(form.muscles),
         position: { left: Number(form.left) || 0, top: Number(form.top) || 0 },
         prerequisites: form.prerequisites,
         isGoal: form.isGoal,
@@ -275,6 +282,12 @@ export default function AdminPage() {
           <Field label="Summary" htmlFor="summary">
             <textarea id="summary" value={form.summary} onChange={(e) => setField('summary', e.target.value)} rows={2} className="w-full px-3 py-2 rounded-lg" style={inputStyle} placeholder="Short description of the movement." />
           </Field>
+
+          <div className="mt-4">
+            <Field label="Target muscles — comma separated" htmlFor="muscles">
+              <input id="muscles" type="text" value={form.muscles} onChange={(e) => setField('muscles', e.target.value)} className="w-full px-3 py-2 rounded-lg" style={inputStyle} placeholder="e.g. Triceps, Chest, Shoulders" />
+            </Field>
+          </div>
 
           <div className="mt-4">
             <Field label="YouTube video (URL or ID)" htmlFor="video">

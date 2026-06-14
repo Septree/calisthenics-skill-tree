@@ -56,6 +56,7 @@ export default async function ExerciseDetailPage({ params }) {
   const instructions = exercise.instructions || [];
   const mistakes = exercise.mistakes || [];
   const tips = exercise.tips || [];
+  const muscles = exercise.muscles || [];
 
   const breadcrumb = {
     '@type': 'BreadcrumbList',
@@ -134,6 +135,21 @@ export default async function ExerciseDetailPage({ params }) {
                     style: { textTransform: 'uppercase' },
                   })}
                 </div>
+
+                {muscles.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap mt-3">
+                    <span className="text-xs uppercase tracking-wide" style={{ color: theme.text.tertiary }}>Targets</span>
+                    {muscles.map((m) => (
+                      <span
+                        key={m}
+                        className="px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        style={{ backgroundColor: theme.background.tertiary, color: theme.text.secondary, border: `1px solid ${theme.border.default}`, textTransform: 'capitalize' }}
+                      >
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
