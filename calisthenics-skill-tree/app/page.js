@@ -11,11 +11,11 @@ export const metadata = {
 const FEATURES = [
   {
     title: 'A visual skill tree',
-    body: 'See every calisthenics move as a node. Unlock harder skills by mastering their prerequisites — from your first push-up to the muscle-up.',
+    body: 'See every calisthenics move as a node. Unlock harder skills by mastering their prerequisites: from your first push-up to the muscle-up.',
   },
   {
     title: 'Track real progress',
-    body: 'Mark moves complete and watch your overall and per-category progress fill up. Your journey is saved to your account.',
+    body: 'Mark moves complete and watch your overall progress fill up. Your journey is saved to your account.',
   },
   {
     title: 'Learn every move',
@@ -24,7 +24,7 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: '01', t: 'Create your account', d: 'Sign up in seconds — no equipment, no payment.' },
+  { n: '01', t: 'Create your account', d: 'Sign up in seconds: no equipment, no payment.' },
   { n: '02', t: 'Pick a skill', d: 'Start at the base of the tree and work upward.' },
   { n: '03', t: 'Train & check it off', d: 'Complete moves and unlock the next tier.' },
 ];
@@ -73,7 +73,7 @@ export default function Home() {
           Master your body,<br />one move at a time.
         </h1>
         <p className="reveal-up text-lg md:text-xl mb-10 max-w-2xl mx-auto" style={{ color: theme.text.tertiary, animationDelay: '0.16s' }}>
-          The Calisthenics Skill Tree turns bodyweight training into a game. Unlock skills, track progress, and level up — all the way to the muscle-up.
+          The skill tree from a video game, but for calisthenics.
         </p>
         <div className="reveal-up flex justify-center" style={{ animationDelay: '0.24s' }}>
           <Link

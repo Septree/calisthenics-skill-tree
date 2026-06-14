@@ -10,4 +10,4 @@ export const SITE_URL = (
 export const SITE_NAME = 'Calisthenics Skill Tree';
 export const SITE_TAGLINE = 'Master your body, one move at a time';
 export const SITE_DESCRIPTION =
-  'A free, gamified calisthenics skill tree. Unlock bodyweight skills by mastering their prerequisites — from your first push-up to the muscle-up — and track your progress.';
+  'The skill tree from a video game, but for calisthenics. Unlock skills, track progress, and level up.';
