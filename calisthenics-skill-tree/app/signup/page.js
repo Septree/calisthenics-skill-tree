@@ -40,8 +40,8 @@ export default function SignupPage() {
     }
 
     if (data.session) {
-      // signed in immediately (email confirmation disabled)
-      router.push('/tree');
+      // signed in immediately (email confirmation disabled) → onboard the new user
+      router.push('/onboarding');
       router.refresh();
     } else {
       // email confirmation is on — no session yet
@@ -75,7 +75,7 @@ export default function SignupPage() {
           Sign up to track your calisthenics progress
         </p>
 
-        <GoogleSignInButton />
+        <GoogleSignInButton next="/onboarding" />
 
         <div className="flex items-center gap-3 my-6">
           <div className="flex-1 h-px" style={{ backgroundColor: theme.border.default }} />

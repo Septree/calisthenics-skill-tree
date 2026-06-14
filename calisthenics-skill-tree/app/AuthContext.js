@@ -56,10 +56,10 @@ export function AuthProvider({ children }) {
     await setProfileGoal(user.id, exerciseId);
   };
 
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (next = '/tree') => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/tree` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     });
     if (error) throw error;
     // browser redirects to Google; the callback route finishes sign-in

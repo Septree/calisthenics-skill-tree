@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { theme } from './theme';
 
-export default function GoogleSignInButton() {
+export default function GoogleSignInButton({ next = '/tree' }) {
   const { loginWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -14,7 +14,7 @@ export default function GoogleSignInButton() {
     setLoading(true);
     try {
       // redirects to Google; the /auth/callback route finishes sign-in
-      await loginWithGoogle();
+      await loginWithGoogle(next);
     } catch (e) {
       console.error('Google sign-in error:', e);
       setError('Could not start Google sign-in. Please try again.');
