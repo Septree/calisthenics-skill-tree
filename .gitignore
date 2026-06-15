@@ -1,0 +1,8 @@
+# Repo-root ignores (the Next app has its own .gitignore in calisthenics-skill-tree/).
+node_modules/
+.DS_Store
+
+# Never commit secrets
+.env
+.env.*
+!.env.example
